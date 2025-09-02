@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using TicketBookingApp.Entities;
+using TicketBookingApp.Repositories;
 using TicketBookingApp.Services.JWT_Services;
 namespace JWTDemo
 {
@@ -18,13 +20,17 @@ namespace JWTDemo
             {
                 options.JsonSerializerOptions.PropertyNamingPolicy = null;
             });
-            
+            builder.Services.AddControllers().AddNewtonsoftJson(options => {
+                options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+            });
+
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
             
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-            
+            builder.Services.AddScoped<UnitOfWork>();
+
             builder.Services.AddMemoryCache();
             
             builder.Services.AddSingleton<IClientCacheService, ClientCacheService>();
@@ -99,6 +105,9 @@ namespace JWTDemo
                     }
                 };
             });
+
+            builder.Services.AddAutoMapper(typeof(Program).Assembly);
+
             var app = builder.Build();
 
             clientCacheInstance = new Lazy<IClientCacheService>(() =>

@@ -9,7 +9,7 @@ namespace TicketBookingApp.Models
         public required User User { get; set; }
         public int ShowId { get; set; }
         public required Show Show { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
         public bool IsCompleted = false;
         public Payment? Payment { get; set; }
         public List<BookingSeat> BookingSeats { get; set; } = new();

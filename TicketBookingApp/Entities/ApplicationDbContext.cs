@@ -63,6 +63,9 @@ namespace TicketBookingApp.Entities
                 .WithMany(s => s.BookingSeats)
                 .HasForeignKey(bs => bs.SeatId)
                 .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.PaymentStatus)
+                .HasConversion<string>();
         }
 
         public DbSet<User> Users { get; set; } = null!;

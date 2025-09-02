@@ -12,8 +12,8 @@ using TicketBookingApp.Entities;
 namespace TicketBookingApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250902064459_mig1")]
-    partial class mig1
+    [Migration("20250902105555_mig3")]
+    partial class mig3
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -152,6 +152,10 @@ namespace TicketBookingApp.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Halls");
@@ -173,6 +177,9 @@ namespace TicketBookingApp.Migrations
 
                     b.Property<string>("PosterUrl")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Rating")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -200,8 +207,9 @@ namespace TicketBookingApp.Migrations
                     b.Property<DateTime>("DateTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("PaymentStatus")
-                        .HasColumnType("int");
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 

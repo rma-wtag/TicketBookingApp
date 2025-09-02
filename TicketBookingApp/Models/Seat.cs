@@ -9,7 +9,7 @@ namespace TicketBookingApp.Models
         public required string SeatNumber { get; set; }
         public int HallId { get; set; }
         public required Hall Hall { get; set; }
-        public List<BookingSeat> BookingSeats { get; set; } = new();
+        public List<BookingSeat?> BookingSeats { get; set; } = new();
 
     }
 }
