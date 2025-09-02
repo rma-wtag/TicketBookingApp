@@ -39,12 +39,43 @@ namespace TicketBookingApp.Entities
                     IsActive = true
                 }
             );
+
+            modelBuilder.Entity<Show>()
+                .HasOne(sh => sh.Movie)
+                .WithMany(m => m.Shows)
+                .HasForeignKey(sh => sh.MovieId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Show>()
+                .HasOne(sh => sh.Hall)
+                .WithMany(h => h.Shows)
+                .HasForeignKey(sh => sh.HallId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<BookingSeat>()
+                .HasOne(bs => bs.Booking)
+                .WithMany(b => b.BookingSeats)
+                .HasForeignKey(bs => bs.BookingId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<BookingSeat>()
+                .HasOne(bs => bs.Seat)
+                .WithMany(s => s.BookingSeats)
+                .HasForeignKey(bs => bs.SeatId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
 
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<Role> Roles { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
         public DbSet<Client> Clients { get; set; } = null!;
+        public DbSet<Booking> Bookings { get; set; } = null!;
+        public DbSet<BookingSeat> BookingSeats { get; set; } = null!;
+        public DbSet<Hall> Halls { get; set; } = null!;
+        public DbSet<Movie> Movies { get; set; } = null!;
+        public DbSet<Payment> Payments { get; set; } = null!;
+        public DbSet<Seat> Seats { get; set; } = null!;
+        public DbSet<Show> Shows { get; set; } = null!;
 
     }
 }
