@@ -424,7 +424,7 @@ namespace TicketBookingApp.Migrations
                     b.HasOne("TicketBookingApp.Models.Seat", "Seat")
                         .WithMany("BookingSeats")
                         .HasForeignKey("SeatId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Booking");

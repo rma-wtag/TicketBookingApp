@@ -40,6 +40,12 @@ namespace TicketBookingApp.Entities
                 }
             );
 
+            modelBuilder.Entity<Seat>()
+               .HasOne(s => s.Hall)
+               .WithMany(h => h.Seats)
+               .HasForeignKey(s => s.HallId)
+               .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<Show>()
                 .HasOne(sh => sh.Movie)
                 .WithMany(m => m.Shows)
@@ -62,7 +68,7 @@ namespace TicketBookingApp.Entities
                 .HasOne(bs => bs.Seat)
                 .WithMany(s => s.BookingSeats)
                 .HasForeignKey(bs => bs.SeatId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<Payment>()
                 .Property(p => p.PaymentStatus)
                 .HasConversion<string>();

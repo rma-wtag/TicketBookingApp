@@ -13,12 +13,34 @@ namespace TicketBookingApp.Repositories
             _context = context;
         }
         public async Task<Hall?> GetHallByIdAsync(int id) {
-            return await _context.Halls.FirstOrDefaultAsync(h => h.Id == id);
+            var hallInfo = await _context.Halls
+                                .Include(h => h.Seats)
+                                .FirstOrDefaultAsync(h => h.Id == id);
+            return hallInfo;
         }
         public async Task<Hall> CreateHallAsync(Hall hall)
         {
             await _context.Halls.AddAsync(hall);
             await _context.SaveChangesAsync();
+
+            // generate 40 seats for this hall
+            var seats = new List<Seat>();
+            for (int i = 1; i <= 40; i++)
+            {
+                seats.Add(new Seat
+                {
+                    SeatNumber = $"S{i:D2}",
+                    HallId = hall.Id,
+                    Hall = hall
+                });
+            }
+
+            await _context.Seats.AddRangeAsync(seats);
+            await _context.SaveChangesAsync();
+
+            // attach seats to hall navigation property
+            hall.Seats = seats;
+
             return hall;
         }
 

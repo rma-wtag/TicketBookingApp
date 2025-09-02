@@ -6,10 +6,10 @@ namespace TicketBookingApp.Models
     {
         public int Id { get; set; }
         [Required(ErrorMessage = "SeatNumber is required.")]
-        public required string SeatNumber { get; set; }
+        public string SeatNumber { get; set; } = string.Empty;
         public int HallId { get; set; }
-        public required Hall Hall { get; set; }
-        public List<BookingSeat?> BookingSeats { get; set; } = new();
+        public Hall? Hall { get; set; }
 
+        public List<BookingSeat?> BookingSeats { get; set; } = new();
     }
 }
