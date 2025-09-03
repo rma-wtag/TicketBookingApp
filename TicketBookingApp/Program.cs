@@ -8,7 +8,9 @@ using TicketBookingApp.Dtos.ShowDtos;
 using TicketBookingApp.Entities;
 using TicketBookingApp.Helpers;
 using TicketBookingApp.Repositories;
+using TicketBookingApp.Services.BookingServices;
 using TicketBookingApp.Services.JWT_Services;
+using TicketBookingApp.Services.PaymentServices;
 namespace JWTDemo
 {
     public class Program
@@ -40,7 +42,9 @@ namespace JWTDemo
             
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IUserService, UserService>();
-            
+            builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+            builder.Services.AddScoped<IPaymentRepository,PaymentRepository>();
+
             Lazy<IClientCacheService>? clientCacheInstance = null;
             
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -110,6 +114,7 @@ namespace JWTDemo
             });
 
             builder.Services.AddAutoMapper(typeof(Program).Assembly);
+
 
             var app = builder.Build();
 

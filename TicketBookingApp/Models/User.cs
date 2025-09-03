@@ -12,7 +12,7 @@ namespace TicketBookingApp.Models
         public required string Email { get; set; }
         [Required(ErrorMessage = "Password must be provided!")]
         [MinLength(6,ErrorMessage = "Password must be atleast 6 digits long!")]
-        [MaxLength(50)]
+        [MaxLength(100)]
         public required string PasswordHash {get;set;}
 
         public ICollection<Role> Roles { get; set; } = new List<Role>();

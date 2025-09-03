@@ -12,7 +12,7 @@ using TicketBookingApp.Entities;
 namespace TicketBookingApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250903053224_mig1")]
+    [Migration("20250903110325_mig1")]
     partial class mig1
     {
         /// <inheritdoc />
@@ -51,6 +51,9 @@ namespace TicketBookingApp.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
                     b.Property<int>("ShowId")
                         .HasColumnType("int");
 
@@ -80,11 +83,16 @@ namespace TicketBookingApp.Migrations
                     b.Property<int>("SeatId")
                         .HasColumnType("int");
 
+                    b.Property<int>("ShowId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BookingId");
 
                     b.HasIndex("SeatId");
+
+                    b.HasIndex("ShowId");
 
                     b.ToTable("BookingSeats");
                 });
@@ -370,8 +378,8 @@ namespace TicketBookingApp.Migrations
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Username")
                         .IsRequired()
@@ -402,7 +410,7 @@ namespace TicketBookingApp.Migrations
                     b.HasOne("TicketBookingApp.Models.Show", "Show")
                         .WithMany("Bookings")
                         .HasForeignKey("ShowId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TicketBookingApp.Models.User", "User")
@@ -427,12 +435,20 @@ namespace TicketBookingApp.Migrations
                     b.HasOne("TicketBookingApp.Models.Seat", "Seat")
                         .WithMany("BookingSeats")
                         .HasForeignKey("SeatId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TicketBookingApp.Models.Show", "Show")
+                        .WithMany()
+                        .HasForeignKey("ShowId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Booking");
 
                     b.Navigation("Seat");
+
+                    b.Navigation("Show");
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Payment", b =>
@@ -499,7 +515,8 @@ namespace TicketBookingApp.Migrations
                 {
                     b.Navigation("BookingSeats");
 
-                    b.Navigation("Payment");
+                    b.Navigation("Payment")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Hall", b =>

@@ -82,7 +82,7 @@ namespace TicketBookingApp.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Username = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
+                    PasswordHash = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -202,7 +202,8 @@ namespace TicketBookingApp.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<int>(type: "int", nullable: false),
                     ShowId = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsCompleted = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -212,7 +213,7 @@ namespace TicketBookingApp.Migrations
                         column: x => x.ShowId,
                         principalTable: "Shows",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Bookings_Users_UserId",
                         column: x => x.UserId,
@@ -228,7 +229,8 @@ namespace TicketBookingApp.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     BookingId = table.Column<int>(type: "int", nullable: false),
-                    SeatId = table.Column<int>(type: "int", nullable: false)
+                    SeatId = table.Column<int>(type: "int", nullable: false),
+                    ShowId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -243,6 +245,12 @@ namespace TicketBookingApp.Migrations
                         name: "FK_BookingSeats_Seats_SeatId",
                         column: x => x.SeatId,
                         principalTable: "Seats",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_BookingSeats_Shows_ShowId",
+                        column: x => x.ShowId,
+                        principalTable: "Shows",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -307,6 +315,11 @@ namespace TicketBookingApp.Migrations
                 name: "IX_BookingSeats_SeatId",
                 table: "BookingSeats",
                 column: "SeatId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BookingSeats_ShowId",
+                table: "BookingSeats",
+                column: "ShowId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Payments_BookingId",

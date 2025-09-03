@@ -34,7 +34,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasIndex("UsersId");
 
-                    b.ToTable("RoleUser", (string)null);
+                    b.ToTable("RoleUser");
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Booking", b =>
@@ -48,6 +48,9 @@ namespace TicketBookingApp.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
                     b.Property<int>("ShowId")
                         .HasColumnType("int");
 
@@ -60,7 +63,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Bookings", (string)null);
+                    b.ToTable("Bookings");
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.BookingSeat", b =>
@@ -77,13 +80,18 @@ namespace TicketBookingApp.Migrations
                     b.Property<int>("SeatId")
                         .HasColumnType("int");
 
+                    b.Property<int>("ShowId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BookingId");
 
                     b.HasIndex("SeatId");
 
-                    b.ToTable("BookingSeats", (string)null);
+                    b.HasIndex("ShowId");
+
+                    b.ToTable("BookingSeats");
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Client", b =>
@@ -118,7 +126,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Clients", (string)null);
+                    b.ToTable("Clients");
 
                     b.HasData(
                         new
@@ -155,7 +163,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Halls", (string)null);
+                    b.ToTable("Halls");
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Movie", b =>
@@ -184,7 +192,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Movies", (string)null);
+                    b.ToTable("Movies");
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Payment", b =>
@@ -213,7 +221,7 @@ namespace TicketBookingApp.Migrations
                     b.HasIndex("BookingId")
                         .IsUnique();
 
-                    b.ToTable("Payments", (string)null);
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.RefreshToken", b =>
@@ -259,7 +267,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens", (string)null);
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Role", b =>
@@ -279,7 +287,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Roles", (string)null);
+                    b.ToTable("Roles");
 
                     b.HasData(
                         new
@@ -321,7 +329,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasIndex("HallId");
 
-                    b.ToTable("Seats", (string)null);
+                    b.ToTable("Seats");
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Show", b =>
@@ -350,7 +358,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasIndex("MovieId");
 
-                    b.ToTable("Shows", (string)null);
+                    b.ToTable("Shows");
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.User", b =>
@@ -367,8 +375,8 @@ namespace TicketBookingApp.Migrations
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Username")
                         .IsRequired()
@@ -376,7 +384,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("RoleUser", b =>
@@ -399,7 +407,7 @@ namespace TicketBookingApp.Migrations
                     b.HasOne("TicketBookingApp.Models.Show", "Show")
                         .WithMany("Bookings")
                         .HasForeignKey("ShowId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TicketBookingApp.Models.User", "User")
@@ -424,12 +432,20 @@ namespace TicketBookingApp.Migrations
                     b.HasOne("TicketBookingApp.Models.Seat", "Seat")
                         .WithMany("BookingSeats")
                         .HasForeignKey("SeatId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TicketBookingApp.Models.Show", "Show")
+                        .WithMany()
+                        .HasForeignKey("ShowId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Booking");
 
                     b.Navigation("Seat");
+
+                    b.Navigation("Show");
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Payment", b =>
@@ -496,7 +512,8 @@ namespace TicketBookingApp.Migrations
                 {
                     b.Navigation("BookingSeats");
 
-                    b.Navigation("Payment");
+                    b.Navigation("Payment")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Hall", b =>

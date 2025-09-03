@@ -40,38 +40,53 @@ namespace TicketBookingApp.Entities
                 }
             );
 
+            // Hall → Seats
             modelBuilder.Entity<Seat>()
-               .HasOne(s => s.Hall)
-               .WithMany(h => h.Seats)
-               .HasForeignKey(s => s.HallId)
-               .OnDelete(DeleteBehavior.Cascade);
+                .HasOne(s => s.Hall)
+                .WithMany(h => h.Seats)
+                .HasForeignKey(s => s.HallId)
+                .OnDelete(DeleteBehavior.Cascade);
 
+            // Show → Movie
             modelBuilder.Entity<Show>()
                 .HasOne(sh => sh.Movie)
                 .WithMany(m => m.Shows)
                 .HasForeignKey(sh => sh.MovieId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Show → Hall
             modelBuilder.Entity<Show>()
                 .HasOne(sh => sh.Hall)
                 .WithMany(h => h.Shows)
                 .HasForeignKey(sh => sh.HallId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Booking → Show (Important: Restrict!)
+            modelBuilder.Entity<Booking>()
+                .HasOne(b => b.Show)
+                .WithMany(sh => sh.Bookings)
+                .HasForeignKey(b => b.ShowId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // BookingSeat → Booking
             modelBuilder.Entity<BookingSeat>()
                 .HasOne(bs => bs.Booking)
                 .WithMany(b => b.BookingSeats)
                 .HasForeignKey(bs => bs.BookingId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // BookingSeat → Seat
             modelBuilder.Entity<BookingSeat>()
                 .HasOne(bs => bs.Seat)
                 .WithMany(s => s.BookingSeats)
                 .HasForeignKey(bs => bs.SeatId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Payment Enum Conversion
             modelBuilder.Entity<Payment>()
                 .Property(p => p.PaymentStatus)
                 .HasConversion<string>();
+
         }
 
         public DbSet<User> Users { get; set; } = null!;
