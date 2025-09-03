@@ -40,7 +40,8 @@ namespace TicketBookingApp.Services.BookingServices
             return availableSeats;
         }
 
-        public async Task<Booking?> CreateNewBookingAsync(CreateBookingDtos createBookingDtos) {
+        public async Task<Booking?> CreateNewBookingAsync(CreateBookingDtos createBookingDtos)
+        {
             var selectedIds = createBookingDtos.SelectedSeatIds.Distinct().ToList();
             if (selectedIds.Count == 0) return null;
 
@@ -49,49 +50,65 @@ namespace TicketBookingApp.Services.BookingServices
 
             if (!selectedIds.All(id => availableSeatIds.Contains(id)))
                 return null;
-            using var tx = await _context.Database.BeginTransactionAsync();
 
-            var takenNow = await _context.BookingSeats
-                                    .Where(bs => bs.ShowId == createBookingDtos.ShowId && selectedIds.Contains(bs.SeatId))
-                                    .Select(bs => bs.SeatId)
-                                    .ToListAsync();
-            if (takenNow.Any()) {
+            using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+            try
+            {
+                var takenNow = await _context.BookingSeats
+                    .Where(bs => bs.ShowId == createBookingDtos.ShowId && selectedIds.Contains(bs.SeatId))
+                    .Select(bs => bs.SeatId)
+                    .ToListAsync();
+
+                if (takenNow.Any())
+                {
+                    await tx.RollbackAsync();
+                    return null;
+                }
+
+                var booking = new Booking
+                {
+                    UserId = createBookingDtos.UserId,
+                    ShowId = createBookingDtos.ShowId,
+                    CreatedAt = DateTime.UtcNow,
+                    IsCompleted = false,
+                    Payment = new Payment
+                    {
+                        Amount = 0,
+                        PaymentStatus = PaymentStatus.Processing,
+                        DateTime = DateTime.UtcNow
+                    }
+                };
+
+                _context.Payments.Add(booking.Payment);
+                await _context.SaveChangesAsync();
+
+                foreach (var seatId in selectedIds)
+                {
+                    booking.BookingSeats.Add(new BookingSeat
+                    {
+                        SeatId = seatId,
+                        ShowId = createBookingDtos.ShowId
+                    });
+                }
+
+                _context.Bookings.Add(booking);
+
+                await _context.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                return booking;
+            }
+            catch (DbUpdateException)
+            {
                 await tx.RollbackAsync();
                 return null;
             }
-
-            var booking = new Booking
+            catch (Exception)
             {
-                UserId = createBookingDtos.UserId,
-                ShowId = createBookingDtos.ShowId,
-                CreatedAt = DateTime.UtcNow,
-                IsCompleted = false,
-                Payment = new Payment
-                {
-                    Amount = 0,
-                    PaymentStatus = PaymentStatus.Processing,
-                    DateTime = DateTime.UtcNow
-                }
-            };
-
-            _context.Payments.Add(booking.Payment);
-            await _context.SaveChangesAsync();
-
-            foreach (var seatId in selectedIds)
-            {
-                booking.BookingSeats.Add(new BookingSeat
-                {
-                    SeatId = seatId,
-                    ShowId = createBookingDtos.ShowId
-                });
+                await tx.RollbackAsync();
+                throw;
             }
-
-            _context.Bookings.Add(booking);
-
-            await _context.SaveChangesAsync();
-            await tx.CommitAsync();
-
-            return booking;
         }
 
         public async Task<Booking?> DeleteBookingAsync(int id) { 

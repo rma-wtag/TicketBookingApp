@@ -86,6 +86,10 @@ namespace TicketBookingApp.Entities
             modelBuilder.Entity<Payment>()
                 .Property(p => p.PaymentStatus)
                 .HasConversion<string>();
+            // Prevents two bookings for the same seat in the same show
+            modelBuilder.Entity<BookingSeat>()
+                .HasIndex(bs => new { bs.ShowId, bs.SeatId })
+                .IsUnique();
 
         }
 

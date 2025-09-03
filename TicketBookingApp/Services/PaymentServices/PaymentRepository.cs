@@ -9,7 +9,5 @@ namespace TicketBookingApp.Services.PaymentServices
         {
             _context = context;
         }
-
-
     }
 }
