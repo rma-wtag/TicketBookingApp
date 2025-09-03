@@ -12,8 +12,8 @@ using TicketBookingApp.Entities;
 namespace TicketBookingApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250902120307_mig6")]
-    partial class mig6
+    [Migration("20250903053224_mig1")]
+    partial class mig1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -487,7 +487,7 @@ namespace TicketBookingApp.Migrations
                     b.HasOne("TicketBookingApp.Models.Movie", "Movie")
                         .WithMany("Shows")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Hall");

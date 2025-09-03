@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Formats.Asn1;
 using System.Globalization;
 using TicketBookingApp.Dtos.MovieDtos;
+using TicketBookingApp.Helpers;
 using TicketBookingApp.Models;
 using TicketBookingApp.Repositories;
 
@@ -24,9 +25,9 @@ namespace TicketBookingApp.Controllers
 
         // GET all movies
         [HttpGet("GetAll")]
-        public ActionResult<IEnumerable<Movie>> GetAll()
+        public async Task<ActionResult<IEnumerable<Movie>>> GetAll()
         {
-            var movies = _uow.MovieRepository.GetAllMovies();
+            var movies = await _uow.MovieRepository.GetAllMovies();
             return Ok(movies);
         }
 
@@ -81,24 +82,20 @@ namespace TicketBookingApp.Controllers
 
         //Upload CSV files
         [HttpPost("upload")]
-        public async Task<IActionResult> UploadMoviesList(IFormFile file) {
-            if (file == null || file.Length == 0) {
+        public async Task<IActionResult> UploadMoviesList(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded.");
-            }
 
-            List<CreateMovieDto> createMovieDtos;
+            ISheetParser<CreateMovieDto> parser = new MovieSheetParser();
 
-            if (Path.GetExtension(file.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase)) {
-                createMovieDtos = await ParseCsvAsync(file);
-            }
-            else if (Path.GetExtension(file.FileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            List<CreateMovieDto> createMovieDtos = extension switch
             {
-                createMovieDtos = await ParseExcelAsync(file);
-            }
-            else
-            {
-                return BadRequest("Only CSV or Excel files are supported.");
-            }
+                ".csv" => await parser.ParseCsvAsync(file),
+                ".xlsx" => await parser.ParseExcelAsync(file),
+                _ => throw new InvalidOperationException("Only CSV or Excel (.xlsx) files are supported.")
+            };
 
             var movieEntities = _mapper.Map<List<Movie>>(createMovieDtos);
             await _uow.MovieRepository.CreateMoviesAsync(movieEntities);
@@ -106,40 +103,5 @@ namespace TicketBookingApp.Controllers
 
             return Ok(new { Count = movieEntities.Count });
         }
-
-        private async Task<List<CreateMovieDto>> ParseCsvAsync(IFormFile file)
-        {
-            using var reader = new StreamReader(file.OpenReadStream());
-            using var csv = new CsvReader(reader, new CsvHelper.Configuration.CsvConfiguration(CultureInfo.InvariantCulture));
-            var records = csv.GetRecords<CreateMovieDto>().ToList();
-            return records;
-        }
-        private async Task<List<CreateMovieDto>> ParseExcelAsync(IFormFile file)
-        {
-            var movies = new List<CreateMovieDto>();
-
-            using var stream = new MemoryStream();
-            await file.CopyToAsync(stream);
-
-            using var workbook = new ClosedXML.Excel.XLWorkbook(stream);
-            var worksheet = workbook.Worksheet(1); // First worksheet
-            var rows = worksheet.RangeUsed().RowsUsed();
-
-            foreach (var row in rows.Skip(1)) // Skip header row
-            {
-                movies.Add(new CreateMovieDto
-                {
-                    Title = row.Cell(1).GetString(),
-                    Description = row.Cell(2).GetString(),
-                    Rating = decimal.Parse(row.Cell(3).GetString()),
-                    Duration = TimeSpan.Parse(row.Cell(4).GetString()),
-                    PosterUrl = row.Cell(5).GetString()
-                });
-            }
-
-            return movies;
-        }
-
     }
-
 }

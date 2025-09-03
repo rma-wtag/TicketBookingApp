@@ -9,12 +9,14 @@ namespace TicketBookingApp.Repositories
         private IDbContextTransaction _transaction;
         public MovieRepository MovieRepository { get; set; }
         public HallRepository HallRepository { get; set; }
+        public ShowRepository ShowRepository { get; set; }
 
         public UnitOfWork(ApplicationDbContext context)
         {
             _context = context;
             MovieRepository = new MovieRepository(context);
             HallRepository = new HallRepository(context);
+            ShowRepository = new ShowRepository(context);
             _transaction = _context.Database.BeginTransaction();
         }
         public async Task CommitAsync()

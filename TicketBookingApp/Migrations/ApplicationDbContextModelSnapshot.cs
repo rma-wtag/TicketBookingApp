@@ -34,7 +34,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasIndex("UsersId");
 
-                    b.ToTable("RoleUser");
+                    b.ToTable("RoleUser", (string)null);
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Booking", b =>
@@ -60,7 +60,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Bookings");
+                    b.ToTable("Bookings", (string)null);
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.BookingSeat", b =>
@@ -83,7 +83,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasIndex("SeatId");
 
-                    b.ToTable("BookingSeats");
+                    b.ToTable("BookingSeats", (string)null);
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Client", b =>
@@ -118,7 +118,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Clients");
+                    b.ToTable("Clients", (string)null);
 
                     b.HasData(
                         new
@@ -155,7 +155,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Halls");
+                    b.ToTable("Halls", (string)null);
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Movie", b =>
@@ -184,7 +184,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Movies");
+                    b.ToTable("Movies", (string)null);
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Payment", b =>
@@ -213,7 +213,7 @@ namespace TicketBookingApp.Migrations
                     b.HasIndex("BookingId")
                         .IsUnique();
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", (string)null);
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.RefreshToken", b =>
@@ -259,7 +259,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("RefreshTokens", (string)null);
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Role", b =>
@@ -279,7 +279,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Roles");
+                    b.ToTable("Roles", (string)null);
 
                     b.HasData(
                         new
@@ -321,7 +321,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasIndex("HallId");
 
-                    b.ToTable("Seats");
+                    b.ToTable("Seats", (string)null);
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.Show", b =>
@@ -350,7 +350,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasIndex("MovieId");
 
-                    b.ToTable("Shows");
+                    b.ToTable("Shows", (string)null);
                 });
 
             modelBuilder.Entity("TicketBookingApp.Models.User", b =>
@@ -376,7 +376,7 @@ namespace TicketBookingApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("RoleUser", b =>
@@ -484,7 +484,7 @@ namespace TicketBookingApp.Migrations
                     b.HasOne("TicketBookingApp.Models.Movie", "Movie")
                         .WithMany("Shows")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Hall");

@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using TicketBookingApp.Dtos.HallDtos;
 using TicketBookingApp.Dtos.MovieDtos;
+using TicketBookingApp.Dtos.ShowDtos;
 using TicketBookingApp.Models;
 
 namespace TicketBookingApp.MappingProfile
@@ -11,8 +12,12 @@ namespace TicketBookingApp.MappingProfile
         {
             CreateMap<CreateMovieDto, Movie>();
             CreateMap<UpdateMovieDto, Movie>();
+
             CreateMap<CreateHallDto, Hall>();
             CreateMap<UpdateHallDto, Hall>();
+
+            CreateMap<CreateShowDto, Show>();
+            CreateMap<UpdateShowDto, Show>();
         }
     }
 }

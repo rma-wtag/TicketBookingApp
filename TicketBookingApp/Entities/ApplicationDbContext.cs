@@ -50,7 +50,7 @@ namespace TicketBookingApp.Entities
                 .HasOne(sh => sh.Movie)
                 .WithMany(m => m.Shows)
                 .HasForeignKey(sh => sh.MovieId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Show>()
                 .HasOne(sh => sh.Hall)

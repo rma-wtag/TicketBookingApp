@@ -12,6 +12,15 @@ namespace TicketBookingApp.Repositories
         {
             _context = context;
         }
+
+        public async Task<IEnumerable<Hall>> GetAllAsync()
+        {
+            var hallInfo = await _context.Halls
+                                .Include(h => h.Seats)
+                                .ToListAsync();
+            return hallInfo;
+        }
+
         public async Task<Hall?> GetHallByIdAsync(int id) {
             var hallInfo = await _context.Halls
                                 .Include(h => h.Seats)
@@ -21,7 +30,6 @@ namespace TicketBookingApp.Repositories
         public async Task<Hall> CreateHallAsync(Hall hall)
         {
             await _context.Halls.AddAsync(hall);
-            await _context.SaveChangesAsync();
 
             // generate 40 seats for this hall
             var seats = new List<Seat>();
@@ -36,7 +44,6 @@ namespace TicketBookingApp.Repositories
             }
 
             await _context.Seats.AddRangeAsync(seats);
-            await _context.SaveChangesAsync();
 
             // attach seats to hall navigation property
             hall.Seats = seats;
@@ -53,7 +60,6 @@ namespace TicketBookingApp.Repositories
             existingHall.Name = hall.Name;
 
             _context.Halls.Update(existingHall);
-            await _context.SaveChangesAsync();
             return existingHall;
         }
 
@@ -64,7 +70,6 @@ namespace TicketBookingApp.Repositories
                 return null;
 
             _context.Halls.Remove(existingHall);
-            await _context.SaveChangesAsync();
 
             return existingHall;
         }

@@ -19,6 +19,26 @@ namespace TicketBookingApp.Controllers
             _mapper = mapper;
         }
 
+        //GetAll
+        [HttpGet("GetAll")]
+        public async Task<ActionResult<Hall>> GetById()
+        {
+            var halls = await _uow.HallRepository.GetAllAsync();
+            if (halls == null)
+                return NotFound();
+            return Ok(halls);
+        }
+
+        // GET hall by id
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Hall>> GetById(int id)
+        {
+            var hall = await _uow.HallRepository.GetHallByIdAsync(id);
+            if (hall == null)
+                return NotFound();
+            return Ok(hall);
+        }
+
         // CREATE hall
         [HttpPost]
         public async Task<ActionResult<Hall>> Create([FromBody] CreateHallDto createDto)
@@ -31,16 +51,6 @@ namespace TicketBookingApp.Controllers
             await _uow.CommitAsync();
 
             return CreatedAtAction(nameof(GetById), new { id = createdHall.Id }, createdHall);
-        }
-
-        // GET hall by id
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Hall>> GetById(int id)
-        {
-            var hall = await _uow.HallRepository.GetHallByIdAsync(id);
-            if (hall == null)
-                return NotFound();
-            return Ok(hall);
         }
 
         // UPDATE hall
@@ -67,6 +77,8 @@ namespace TicketBookingApp.Controllers
             if (deleted == null) {
                 return NotFound();
             }
+
+            await _uow.CommitAsync();
 
             return Ok(deleted);
         }

@@ -3,7 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using TicketBookingApp.Dtos.MovieDtos;
+using TicketBookingApp.Dtos.ShowDtos;
 using TicketBookingApp.Entities;
+using TicketBookingApp.Helpers;
 using TicketBookingApp.Repositories;
 using TicketBookingApp.Services.JWT_Services;
 namespace JWTDemo

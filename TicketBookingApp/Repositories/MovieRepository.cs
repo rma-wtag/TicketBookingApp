@@ -16,9 +16,9 @@ namespace TicketBookingApp.Repositories
         }
 
         // READ
-        public List<Movie> GetAllMovies()
+        public async Task<IEnumerable<Movie>> GetAllMovies()
         {
-            return _context.Movies.ToList();
+            return await _context.Movies.ToListAsync();
         }
 
         public async Task<Movie?> GetMovieByIdAsync(int id)
@@ -30,7 +30,6 @@ namespace TicketBookingApp.Repositories
         public async Task<Movie> CreateMovieAsync(Movie movie)
         {
             await _context.Movies.AddAsync(movie);
-            await _context.SaveChangesAsync();
             return movie;
         }
 
@@ -47,7 +46,6 @@ namespace TicketBookingApp.Repositories
             existingMovie.Rating = updateMovieDto.Rating;
 
             _context.Movies.Update(existingMovie);
-            await _context.SaveChangesAsync();
             return existingMovie;
         }
 
@@ -59,7 +57,6 @@ namespace TicketBookingApp.Repositories
                 return null;
 
             _context.Movies.Remove(movie);
-            await _context.SaveChangesAsync();
             return movie;
         }
 
@@ -67,7 +64,6 @@ namespace TicketBookingApp.Repositories
         public async Task CreateMoviesAsync(IEnumerable<Movie> movies)
         {
             await _context.Movies.AddRangeAsync(movies);
-            await _context.SaveChangesAsync();
         }
     }
 
