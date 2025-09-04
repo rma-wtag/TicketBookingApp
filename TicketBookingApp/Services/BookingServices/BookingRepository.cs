@@ -38,7 +38,7 @@ namespace TicketBookingApp.Services.BookingServices
 
             var availableSeats = await _context.Seats
                                         .Where(s=> s.HallId == hallId &&  !_context.BookingSeats
-                                        .Any(bs => bs.SeatId == s.Id && bs.Booking.ShowId == showId))
+                                        .Any(bs => bs.SeatId == s.Id && bs.Booking!.ShowId == showId))
                                         .ToListAsync();
             return availableSeats;
         }
@@ -80,14 +80,11 @@ namespace TicketBookingApp.Services.BookingServices
                     IsCompleted = false,
                     Payment = new Payment
                     {
-                        Amount = show!.Price,
+                        Amount = (show!.Price * selectedIds.Count),
                         PaymentStatus = PaymentStatus.Processing,
                         DateTime = DateTime.UtcNow
                     }
                 };
-
-                //_context.Payments.Add(booking.Payment);
-                //await _context.SaveChangesAsync();
 
                 foreach (var seatId in selectedIds)
                 {

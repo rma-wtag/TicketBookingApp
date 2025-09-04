@@ -22,12 +22,9 @@ namespace TicketBookingApp.Controllers
         [HttpPost("session")]
         public async Task<ActionResult<PaymentSessionResponse>> CreateSession([FromBody] PaymentSessionRequest req, CancellationToken ct)
         {
-            var payment = await _context.Payments
-                        .Include(p=>p.Booking)
-                        .FirstOrDefaultAsync(p => p.Id == req.PaymentId);
             var payload = new Dictionary<string, string>
         {
-            { "total_amount", payment!.Amount.ToString("0.0") },
+            { "total_amount", req.Amount.ToString("0.0") },
             { "currency", "BDT" },
             { "tran_id", req.PaymentId.ToString() },
 
@@ -52,11 +49,6 @@ namespace TicketBookingApp.Controllers
             if (string.IsNullOrEmpty(url))
                 return BadRequest(new PaymentSessionResponse());
 
-
-            payment!.PaymentStatus = Models.PaymentStatus.Success;
-            payment.Booking.IsCompleted = true;
-            _context.SaveChanges();
-
             return Ok(new PaymentSessionResponse
             {
                 Status = "SUCCESS",
@@ -66,14 +58,25 @@ namespace TicketBookingApp.Controllers
 
         /// Step 2: Browser returns here after payment
         [HttpPost("success")]
-        public async Task<IActionResult> PaymentSuccess([FromForm] string val_id, CancellationToken ct)
+        public async Task<IActionResult> PaymentSuccess([FromForm] string val_id, [FromForm] string tran_id, CancellationToken ct)
         {
             var validation = await _ssl.ValidateAsync(val_id, ct);
-
             if (validation is null) return BadRequest();
 
-            // TODO: update DB, mark order as Paid
-            return Ok(new { status = "success", data = validation.RootElement });
+            if (!int.TryParse(tran_id, out var paymentId))
+                return BadRequest(new { error = "Invalid payment id" });
+
+            var payment = await _context.Payments
+                .Include(p=>p.Booking)
+                .FirstOrDefaultAsync(p => p.Id == paymentId, ct);
+
+            if (payment == null) return NotFound(new { error = "Payment not found" });
+
+            payment.PaymentStatus = Models.PaymentStatus.Success;
+            payment.Booking.IsCompleted = true;
+            await _context.SaveChangesAsync(ct);
+
+            return Ok(new { status = "success", transaction = validation.RootElement });
         }
 
         [HttpPost("fail")]
@@ -90,7 +93,6 @@ namespace TicketBookingApp.Controllers
 
             if (validation is null) return BadRequest();
 
-            // TODO: process payment securely
             return Ok(new { status = "ipn_received", data = validation.RootElement });
         }
 

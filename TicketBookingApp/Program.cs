@@ -115,6 +115,15 @@ namespace JWTDemo
 
             builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowBlazorClient",
+                    policy => policy.WithOrigins("https://localhost:7079")
+                                    .AllowAnyHeader()
+                                    .AllowAnyMethod()
+                                    .AllowCredentials());
+            });
+
 
             var app = builder.Build();
 
@@ -131,7 +140,7 @@ namespace JWTDemo
            
             app.UseAuthentication();
             app.UseAuthorization();
-
+            app.UseCors("AllowBlazorClient");
             app.MapControllers();
 
             app.Run();

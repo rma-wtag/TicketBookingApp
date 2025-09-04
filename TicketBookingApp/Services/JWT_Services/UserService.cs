@@ -31,8 +31,11 @@ namespace TicketBookingApp.Services.JWT_Services
                 return null; 
 
             var roles = user.Roles.Select(ur => ur.Name).ToList();
-           
-            var client = await _clientCacheService.GetClientByIdAsync(loginDto.ClientId);
+
+            var clientId = "client-app-one";
+
+
+            var client = await _clientCacheService.GetClientByIdAsync(clientId);
             if (client == null)
             {
                 
