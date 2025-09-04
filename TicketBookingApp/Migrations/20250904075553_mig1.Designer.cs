@@ -12,7 +12,7 @@ using TicketBookingApp.Entities;
 namespace TicketBookingApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250903110325_mig1")]
+    [Migration("20250904075553_mig1")]
     partial class mig1
     {
         /// <inheritdoc />
@@ -92,7 +92,8 @@ namespace TicketBookingApp.Migrations
 
                     b.HasIndex("SeatId");
 
-                    b.HasIndex("ShowId");
+                    b.HasIndex("ShowId", "SeatId")
+                        .IsUnique();
 
                     b.ToTable("BookingSeats");
                 });
@@ -351,6 +352,9 @@ namespace TicketBookingApp.Migrations
 
                     b.Property<int>("MovieId")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("datetime2");

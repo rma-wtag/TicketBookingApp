@@ -44,6 +44,7 @@ namespace TicketBookingApp.Repositories
 
             existingShow.MovieId = show.MovieId;
             existingShow.HallId = show.HallId;
+            existingShow.Price = show.Price;
             existingShow.StartTime  = show.StartTime;
             existingShow.EndTime = show.EndTime;
 

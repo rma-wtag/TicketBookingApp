@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using TicketBookingApp.Entities;
 using TicketBookingApp.Models.PaymentGwModels;
 using TicketBookingApp.Services.PaymentServices;
 
@@ -9,20 +11,25 @@ namespace TicketBookingApp.Controllers
     public class PaymentController : ControllerBase
     {
         private readonly SSLCommerzService _ssl;
-        public PaymentController(SSLCommerzService ssl)
+        private readonly ApplicationDbContext _context;
+        public PaymentController(SSLCommerzService ssl,ApplicationDbContext context)
         {
             _ssl = ssl;
+            _context = context;
         }
 
         /// Step 1: Create hosted checkout session
         [HttpPost("session")]
         public async Task<ActionResult<PaymentSessionResponse>> CreateSession([FromBody] PaymentSessionRequest req, CancellationToken ct)
         {
+            var payment = await _context.Payments
+                        .Include(p=>p.Booking)
+                        .FirstOrDefaultAsync(p => p.Id == req.PaymentId);
             var payload = new Dictionary<string, string>
         {
-            { "total_amount", req.Amount.ToString("0.00") },
+            { "total_amount", payment!.Amount.ToString("0.0") },
             { "currency", "BDT" },
-            { "tran_id", req.TranId },
+            { "tran_id", req.PaymentId.ToString() },
 
             { "success_url", "https://localhost:7064/api/v1/Payment/success" },
             { "fail_url", "https://localhost:7064/api/v1/Payment/fail" },
@@ -33,7 +40,7 @@ namespace TicketBookingApp.Controllers
             { "cus_city", "Dhaka" },
             { "cus_postcode", "1219" },
             { "cus_country", "Bangladesh" },
-            { "cus_phone", req.CusPhone },
+            { "cus_phone", "+880" },
             { "shipping_method", "NO" },
             { "product_name", "Test Product" },
             { "product_category", "Service" },
@@ -44,6 +51,11 @@ namespace TicketBookingApp.Controllers
 
             if (string.IsNullOrEmpty(url))
                 return BadRequest(new PaymentSessionResponse());
+
+
+            payment!.PaymentStatus = Models.PaymentStatus.Success;
+            payment.Booking.IsCompleted = true;
+            _context.SaveChanges();
 
             return Ok(new PaymentSessionResponse
             {

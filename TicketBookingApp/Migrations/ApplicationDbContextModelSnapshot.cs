@@ -89,7 +89,8 @@ namespace TicketBookingApp.Migrations
 
                     b.HasIndex("SeatId");
 
-                    b.HasIndex("ShowId");
+                    b.HasIndex("ShowId", "SeatId")
+                        .IsUnique();
 
                     b.ToTable("BookingSeats");
                 });
@@ -348,6 +349,9 @@ namespace TicketBookingApp.Migrations
 
                     b.Property<int>("MovieId")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("datetime2");

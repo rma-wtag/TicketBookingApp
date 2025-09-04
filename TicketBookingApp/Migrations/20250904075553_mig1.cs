@@ -117,6 +117,7 @@ namespace TicketBookingApp.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     MovieId = table.Column<int>(type: "int", nullable: false),
                     HallId = table.Column<int>(type: "int", nullable: false),
+                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     StartTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     EndTime = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
@@ -317,9 +318,10 @@ namespace TicketBookingApp.Migrations
                 column: "SeatId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_BookingSeats_ShowId",
+                name: "IX_BookingSeats_ShowId_SeatId",
                 table: "BookingSeats",
-                column: "ShowId");
+                columns: new[] { "ShowId", "SeatId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Payments_BookingId",

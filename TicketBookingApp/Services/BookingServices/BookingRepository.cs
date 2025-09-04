@@ -17,11 +17,13 @@ namespace TicketBookingApp.Services.BookingServices
 
         public async Task<IEnumerable<Booking>> GetAllBookingAsync()
         {
-            return await _context.Bookings.ToListAsync();
+            return await _context.Bookings.Include(b => b.Payment)
+                                            .ToListAsync();
         }
 
         public async Task<Booking?> GetBookingByIdAsync(int id){
-            var booking = await _context.Bookings.FirstOrDefaultAsync(x => x.Id == id);
+            var booking = await _context.Bookings.Include(b => b.Payment)
+                                                 .FirstOrDefaultAsync(x => x.Id == id);
 
             if (booking == null) return null;
             return booking;
@@ -45,7 +47,7 @@ namespace TicketBookingApp.Services.BookingServices
         {
             var selectedIds = createBookingDtos.SelectedSeatIds.Distinct().ToList();
             if (selectedIds.Count == 0) return null;
-            if (selectedIds.Count > 4) return null; // need to handle, from user pov
+            //if (selectedIds.Count > 4) return null; // need to handle, from user pov
 
             var availableSeats = await GetAvailableSeatsAsync(createBookingDtos.ShowId);
             var availableSeatIds = availableSeats!.Select(s => s.Id);
@@ -68,6 +70,8 @@ namespace TicketBookingApp.Services.BookingServices
                     return null;
                 }
 
+                var show = await _context.Shows.FirstOrDefaultAsync(s => s.Id == createBookingDtos.ShowId);
+
                 var booking = new Booking
                 {
                     UserId = createBookingDtos.UserId,
@@ -76,14 +80,14 @@ namespace TicketBookingApp.Services.BookingServices
                     IsCompleted = false,
                     Payment = new Payment
                     {
-                        Amount = 0,
+                        Amount = show!.Price,
                         PaymentStatus = PaymentStatus.Processing,
                         DateTime = DateTime.UtcNow
                     }
                 };
 
-                _context.Payments.Add(booking.Payment);
-                await _context.SaveChangesAsync();
+                //_context.Payments.Add(booking.Payment);
+                //await _context.SaveChangesAsync();
 
                 foreach (var seatId in selectedIds)
                 {
