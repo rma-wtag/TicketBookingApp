@@ -29,6 +29,7 @@ namespace JWTDemo
                 options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
             });
 
+            builder.Services.AddHttpClient<SSLCommerzService>();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
             
@@ -43,7 +44,6 @@ namespace JWTDemo
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IBookingRepository, BookingRepository>();
-            builder.Services.AddScoped<IPaymentRepository,PaymentRepository>();
 
             Lazy<IClientCacheService>? clientCacheInstance = null;
             

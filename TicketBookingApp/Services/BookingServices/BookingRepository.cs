@@ -9,6 +9,7 @@ namespace TicketBookingApp.Services.BookingServices
     public class BookingRepository : IBookingRepository
     {
         public readonly ApplicationDbContext _context;
+
         public BookingRepository(ApplicationDbContext context)
         {
             _context = context;
@@ -44,6 +45,7 @@ namespace TicketBookingApp.Services.BookingServices
         {
             var selectedIds = createBookingDtos.SelectedSeatIds.Distinct().ToList();
             if (selectedIds.Count == 0) return null;
+            if (selectedIds.Count > 4) return null; // need to handle, from user pov
 
             var availableSeats = await GetAvailableSeatsAsync(createBookingDtos.ShowId);
             var availableSeatIds = availableSeats!.Select(s => s.Id);
