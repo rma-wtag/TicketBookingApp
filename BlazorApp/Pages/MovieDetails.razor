@@ -1,0 +1,202 @@
+﻿@page "/movie/{movieId:int}"
+@using System.ComponentModel.DataAnnotations
+@using System.ComponentModel.DataAnnotations.Schema
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@attribute [Authorize]
+
+<PageTitle>@(movie?.Title ?? "Movie Details")</PageTitle>
+
+<div class="container mt-4">
+    @if (movie == null && !isLoading)
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-danger text-center" role="alert">
+                    <h4 class="alert-heading">Movie Not Found</h4>
+                    <p class="mb-3">The requested movie could not be found.</p>
+                    <button class="btn btn-primary" @onclick="GoBackToMovies">
+                        <i class="bi bi-arrow-left"></i> Back to Movies
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+    else if (isLoading)
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading movie details...</p>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Back Button -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <button class="btn btn-outline-secondary" @onclick="GoBackToMovies">
+                    <i class="bi bi-arrow-left"></i> Back to Movies
+                </button>
+            </div>
+        </div>
+
+        <!-- Movie Details -->
+        <div class="row">
+            <!-- Movie Poster -->
+            <div class="col-lg-4 col-md-5 mb-4">
+                <div class="card shadow">
+                    @if (!string.IsNullOrEmpty(movie.PosterUrl))
+                    {
+                        <img src="@movie.PosterUrl" class="card-img-top" alt="@movie.Title" style="height: 600px; object-fit: cover;" />
+                    }
+                    else
+                    {
+                        <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted" style="height: 600px;">
+                            <div class="text-center">
+                                <i class="bi bi-image" style="font-size: 4rem;"></i>
+                                <p class="mb-0 mt-2">No Image Available</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Movie Information -->
+            <div class="col-lg-8 col-md-7">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <h1 class="card-title display-5 mb-4">@movie.Title</h1>
+                        
+                        <!-- Movie Stats -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="bi bi-star-fill text-warning me-2 fs-5"></i>
+                                    <span class="fs-4 fw-bold text-warning">@movie.Rating.ToString("F1")</span>
+                                    <span class="text-muted ms-2">/ 10</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="bi bi-clock me-2 fs-5 text-primary"></i>
+                                    <span class="fs-5">@FormatDuration(movie.Duration)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        @if (!string.IsNullOrEmpty(movie.Description))
+                        {
+                            <div class="mb-4">
+                                <h5 class="mb-3">
+                                    <i class="bi bi-journal-text me-2"></i>Description
+                                </h5>
+                                <p class="lead text-muted lh-base">@movie.Description</p>
+                            </div>
+                        }
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="btn btn-primary btn-lg">
+                                <i class="bi bi-ticket-perforated me-2"></i>Book Tickets
+                            </button>
+                            <button class="btn btn-outline-danger">
+                                <i class="bi bi-heart me-2"></i>Add to Favorites
+                            </button>
+                            <button class="btn btn-outline-secondary">
+                                <i class="bi bi-share me-2"></i>Share
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    }
+</div>
+
+@code {
+    [Parameter] public int MovieId { get; set; }
+    
+    private Movie? movie;
+    private bool isLoading = true;
+
+    public class Movie
+    {
+        public int Id { get; set; }
+        [Required(ErrorMessage = "Movie Title is required.")]
+        public required string Title { get; set; }
+        public string? Description { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        [Range(0, 10.0, ErrorMessage = "Rating should be between 0 to 10.")]
+        public decimal Rating { get; set; }
+        [Required(ErrorMessage = "Movie duration is required.")]
+        public TimeSpan Duration { get; set; }
+        public string? PosterUrl { get; set; }
+        public List<Show>? Shows { get; set; }
+    }
+
+    public class Show
+    {
+        // Add Show properties as needed
+        public int Id { get; set; }
+        public DateTime ShowTime { get; set; }
+        public decimal Price { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMovie();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (isLoading)
+        {
+            await LoadMovie();
+        }
+    }
+
+    private async Task LoadMovie()
+    {
+        try
+        {
+            isLoading = true;
+            movie = await Http.GetFromJsonAsync<Movie>($"/api/v1/Movie/{MovieId}");
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("404"))
+        {
+            // Movie not found
+            movie = null;
+        }
+        catch (Exception ex)
+        {
+            // Handle other errors
+            Console.WriteLine($"Error loading movie: {ex.Message}");
+            movie = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoBackToMovies()
+    {
+        Navigation.NavigateTo("/movies");
+    }
+
+    private string FormatDuration(TimeSpan duration)
+    {
+        if (duration.Hours > 0)
+        {
+            return $"{duration.Hours}h {duration.Minutes}m";
+        }
+        return $"{duration.Minutes}m";
+    }
+}

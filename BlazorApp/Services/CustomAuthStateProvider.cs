@@ -29,6 +29,8 @@ namespace BlazorApp.Services
                 var identity = new ClaimsIdentity(claims, "jwt");
                 var user = new ClaimsPrincipal(identity);
 
+                Console.WriteLine(user);
+
                 return new AuthenticationState(user);
             }
             catch
@@ -56,7 +58,20 @@ namespace BlazorApp.Services
         {
             var handler = new JwtSecurityTokenHandler();
             var jsonToken = handler.ReadJwtToken(jwt);
-            return jsonToken.Claims;
+            var claims = jsonToken.Claims.ToList();
+
+            var nameClaim = jsonToken.Claims.FirstOrDefault(c => c.Type == "name");
+            if (nameClaim != null)
+                claims.Add(new Claim(ClaimTypes.Name, nameClaim.Value));
+
+            // Map "role" claims to ClaimTypes.Role so IsInRole() works
+            claims.AddRange(jsonToken.Claims
+                .Where(c => c.Type == "role")
+                .Select(c => new Claim(ClaimTypes.Role, c.Value)));
+
+
+            return claims;
         }
+
     }
 }

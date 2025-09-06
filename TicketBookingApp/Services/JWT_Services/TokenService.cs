@@ -30,9 +30,10 @@ namespace TicketBookingApp.Services.JWT_Services
             {
               
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Name,user.Username),
 
                 new Claim(JwtRegisteredClaimNames.Jti, jwtId),
-   
+
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 
                 new Claim(JwtRegisteredClaimNames.Iss, issuer),

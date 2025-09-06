@@ -1,0 +1,345 @@
+﻿@page "/show/{ShowId:int}/book"
+@using System.Text.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<div class="container mt-4">
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (show != null)
+    {
+        <div class="row">
+            <!-- Back Button -->
+            <div class="col-12 mb-3">
+                <button class="btn btn-outline-secondary" @onclick="GoBack">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    Back to Shows
+                </button>
+            </div>
+
+            <!-- Show Details Card -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-film me-2"></i>
+                            Show Details
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Poster -->
+                            <div class="col-md-4 mb-3">
+                                @if (!string.IsNullOrEmpty(show.Movie?.PosterUrl))
+                                {
+                                    <img src="@show.Movie.PosterUrl"
+                                         alt="@show.Movie.Title poster"
+                                         class="img-fluid rounded shadow"
+                                         style="width: 100%; max-width: 300px; object-fit: cover;"
+                                         onerror="this.src='https://via.placeholder.com/300x450/6c757d/ffffff?text=No+Image'">
+                                }
+                                else
+                                {
+                                    <div class="bg-light rounded d-flex align-items-center justify-content-center text-muted"
+                                         style="width: 100%; height: 300px; font-size: 16px;">
+                                        <span>No Image Available</span>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Movie Info -->
+                            <div class="col-md-8">
+                                <h3 class="fw-bold text-primary mb-3">@show.Movie?.Title</h3>
+
+                                @if (!string.IsNullOrEmpty(show.Movie?.Description))
+                                {
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Description</h6>
+                                        <p class="text-secondary">@show.Movie.Description</p>
+                                    </div>
+                                }
+
+                                <div class="row mb-3">
+                                    @if (show.Movie?.Rating > 0)
+                                    {
+                                        <div class="col-sm-6 mb-2">
+                                            <strong>Rating:</strong>
+                                            <span class="badge bg-warning text-dark ms-2">⭐ @show.Movie.Rating</span>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(show.Movie?.Duration))
+                                    {
+                                        <div class="col-sm-6 mb-2">
+                                            <strong>Duration:</strong>
+                                            <span class="text-muted ms-2">@show.Movie.Duration</span>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-sm-6 mb-2">
+                                        <strong>Hall:</strong>
+                                        <span class="badge bg-secondary ms-2">Hall @show.HallId</span>
+                                        @if (!string.IsNullOrEmpty(show.Hall?.Name))
+                                        {
+                                            <div class="text-muted small">@show.Hall.Name</div>
+                                        }
+                                    </div>
+                                    <div class="col-sm-6 mb-2">
+                                        <strong>Price per ticket:</strong>
+                                        <span class="text-success fw-bold ms-2 fs-5">${@show.Price}</span>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-sm-6 mb-2">
+                                        <strong>Start Time:</strong>
+                                        <div class="text-muted">
+                                            @show.StartTime.ToString("dddd, MMM dd, yyyy")
+                                            <br>
+                                            <span class="fw-medium">@show.StartTime.ToString("HH:mm")</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 mb-2">
+                                        <strong>End Time:</strong>
+                                        <div class="text-muted">
+                                            @show.EndTime.ToString("dddd, MMM dd, yyyy")
+                                            <br>
+                                            <span class="fw-medium">@show.EndTime.ToString("HH:mm")</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booking Panel -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-ticket-perforated me-2"></i>
+                            Book Tickets
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <label for="quantity" class="form-label fw-medium">
+                                <i class="bi bi-people me-1"></i>
+                                Number of Tickets
+                            </label>
+                            <div class="input-group">
+                                <button class="btn btn-outline-secondary"
+                                        type="button"
+                                        @onclick="DecreaseQuantity"
+                                        disabled="@(quantity <= 1)">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <input type="number"
+                                       id="quantity"
+                                       class="form-control text-center fw-bold"
+                                       @bind="quantity"
+                                       @bind:event="oninput"
+                                       min="1"
+                                       max="10"
+                                       readonly>
+                                <button class="btn btn-outline-secondary"
+                                        type="button"
+                                        @onclick="IncreaseQuantity"
+                                        disabled="@(quantity >= 10)">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Maximum 10 tickets per booking</small>
+                        </div>
+
+                        <!-- Price Summary -->
+                        <div class="bg-light rounded p-3 mb-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Ticket Price:</span>
+                                <span>${@show.Price}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Quantity:</span>
+                                <span>@quantity</span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between fw-bold fs-5">
+                                <span>Total:</span>
+                                <span class="text-success">${@(show.Price* quantity)}</span>
+                            </div>
+                        </div>
+
+                        <!-- Book Button -->
+                        <button class="btn btn-success w-100 btn-lg"
+                                @onclick="ProceedToBooking"
+                                disabled="@isBooking">
+                            @if (isBooking)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>Processing...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-credit-card me-2"></i>
+                                <span>Proceed to Payment</span>
+                            }
+                        </button>
+
+                        <div class="text-center mt-3">
+                            <small class="text-muted">
+                                <i class="bi bi-shield-check me-1"></i>
+                                Secure payment processing
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger mt-3">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            @errorMessage
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int ShowId { get; set; }
+
+    private Show? show;
+    private bool isLoading = true;
+    private bool isBooking = false;
+    private string errorMessage = "";
+    private int quantity = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadShow();
+    }
+
+    private async Task LoadShow()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = "";
+
+            var response = await Http.GetAsync($"/api/v1/Show/{ShowId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonString = await response.Content.ReadAsStringAsync();
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                show = JsonSerializer.Deserialize<Show>(jsonString, options);
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                errorMessage = "Show not found. It may have been cancelled or removed.";
+            }
+            else
+            {
+                errorMessage = $"Failed to load show details. Status: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading show details: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void IncreaseQuantity()
+    {
+        if (quantity < 10)
+        {
+            quantity++;
+        }
+    }
+
+    private void DecreaseQuantity()
+    {
+        if (quantity > 1)
+        {
+            quantity--;
+        }
+    }
+
+    private async Task ProceedToBooking()
+    {
+        try
+        {
+            isBooking = true;
+
+            // Here you would typically:
+            // 1. Validate availability
+            // 2. Reserve seats temporarily
+            // 3. Navigate to payment page
+
+            // For now, simulate processing time
+            await Task.Delay(2000);
+
+            // Navigate to payment or confirmation page
+            Navigation.NavigateTo($"/payment?showId={ShowId}&quantity={quantity}&total={show!.Price * quantity}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error processing booking: {ex.Message}";
+        }
+        finally
+        {
+            isBooking = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/shows");
+    }
+
+    // Data models (same as in ShowsPage)
+    public class Show
+    {
+        public int Id { get; set; }
+        public int MovieId { get; set; }
+        public Movie? Movie { get; set; }
+        public int HallId { get; set; }
+        public Hall? Hall { get; set; }
+        public decimal Price { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+    }
+
+    public class Movie
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public double Rating { get; set; }
+        public string Duration { get; set; } = "";
+        public string PosterUrl { get; set; } = "";
+    }
+
+    public class Hall
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+    }
+}

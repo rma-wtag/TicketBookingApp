@@ -1,6 +1,9 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Navigation
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">BlazorApp</a>
+        <a class="navbar-brand" href="">TicketBooking</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -9,17 +12,53 @@
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="flex-column">
+        <!-- Always visible: Home -->
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <i class="fa-solid fa-house fa-lg me-2"></i> Home
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        
+
+        <!-- Counter: Visible to all authenticated users -->
+        @* <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="counter">
+                        <i class="fa-solid fa-plus-square fa-lg me-2"></i> Counter
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView> *@
+
+        <!-- Movies & Shows: Visible only to Users (role: User) -->
+        <AuthorizeView Roles="User">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="movies">
+                    <i class="fa-solid fa-film fa-lg me-2"></i> Movies
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="shows">
+                    <i class="fa-solid fa-tv fa-lg me-2"></i> Shows
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <!-- Admin Movies & Shows: Visible only to Admin (role: Admin) -->
+        <AuthorizeView Roles="Admin">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/movies">
+                    <i class="fa-solid fa-clapperboard fa-lg me-2"></i> Admin Movies
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/shows">
+                    <i class="fa-solid fa-calendar-days fa-lg me-2"></i> Admin Shows
+                </NavLink>
+            </div>
+        </AuthorizeView>
     </nav>
 </div>
 

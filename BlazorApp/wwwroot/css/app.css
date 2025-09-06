@@ -1,3 +1,5 @@
+@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css");
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
@@ -8,6 +10,13 @@ h1:focus {
 
 a, .btn-link {
     color: #0071c1;
+}
+
+.nav-scrollable {
+    background-color: #004687; /* default dark color */
+    color: white;
+    height: 100%;
+    overflow-y: auto;
 }
 
 .btn-primary {
@@ -35,6 +44,7 @@ a, .btn-link {
 .validation-message {
     color: red;
 }
+
 
 #blazor-error-ui {
     background: lightyellow;

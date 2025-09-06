@@ -1,0 +1,168 @@
+﻿@page "/movies"
+@using System.ComponentModel.DataAnnotations
+@using System.ComponentModel.DataAnnotations.Schema
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@attribute [Authorize]
+
+<PageTitle>Movies</PageTitle>
+
+<h1>Movies</h1>
+
+<div class="container mt-4">
+
+    @if (movies == null)
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading movies...</p>
+                </div>
+            </div>
+        </div>
+    }
+    else if (!movies.Any())
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info text-center" role="alert">
+                    <h4 class="alert-heading">No Movies Available</h4>
+                    <p class="mb-0">There are currently no movies to display.</p>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var movie in movies)
+            {
+                <div class="col-lg-3 col-md-4 col-sm-6">
+                    <div class="card h-100 shadow-sm movie-card" @onclick="() => ViewMovie(movie.Id)" style="cursor: pointer;">
+                        <div class="poster-container">
+                            @if (!string.IsNullOrEmpty(movie.PosterUrl))
+                            {
+                                <img src="@movie.PosterUrl"
+                                     class="card-img-top"
+                                     alt="@movie.Title"
+                                     style="height: 400px; object-fit: cover;"
+                                     onerror="this.onerror=null; this.src='https://via.placeholder.com/400x600/6c757d/ffffff?text=No+Image';" />
+                            }
+                            else
+                            {
+                                <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted" style="height: 400px;">
+                                    <div class="text-center">
+                                        <i class="bi bi-image fs-1"></i>
+                                        <p class="mb-0 small">No Image</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">@movie.Title</h5>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-star-fill"></i> @movie.Rating.ToString("F1")
+                                </span>
+                                <small class="text-muted">@FormatDuration(movie.Duration)</small>
+                            </div>
+                            @if (!string.IsNullOrEmpty(movie.Description))
+                            {
+                                <p class="card-text text-muted small flex-grow-1">@TruncateDescription(movie.Description)</p>
+                            }
+                            <div class="mt-auto">
+                                <button class="btn btn-outline-primary btn-sm w-100">View Details</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .movie-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+        .movie-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+        }
+
+    .poster-container {
+        overflow: hidden;
+    }
+
+    .card-img-top {
+        transition: transform 0.3s ease-in-out;
+    }
+
+    .movie-card:hover .card-img-top {
+        transform: scale(1.05);
+    }
+</style>
+
+@code {
+    private List<Movie>? movies;
+
+    public class Movie
+    {
+        public int Id { get; set; }
+        [Required(ErrorMessage = "Movie Title is required.")]
+        public required string Title { get; set; }
+        public string? Description { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        [Range(0, 10.0, ErrorMessage = "Rating should be between 0 to 10.")]
+        public decimal Rating { get; set; }
+        [Required(ErrorMessage = "Movie duration is required.")]
+        public TimeSpan Duration { get; set; }
+        public string? PosterUrl { get; set; }
+        public List<Show>? Shows { get; set; }
+    }
+
+    public class Show
+    {
+        // Add Show properties as needed
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            movies = await Http.GetFromJsonAsync<List<Movie>>("/api/v1/Movie/GetAll");
+        }
+        catch (Exception ex)
+        {
+            // Handle error - you might want to show an error message
+            Console.WriteLine($"Error loading movies: {ex.Message}");
+            movies = new List<Movie>();
+        }
+    }
+
+    private void ViewMovie(int movieId)
+    {
+        Navigation.NavigateTo($"/movie/{movieId}");
+    }
+
+    private string FormatDuration(TimeSpan duration)
+    {
+        if (duration.Hours > 0)
+        {
+            return $"{duration.Hours}h {duration.Minutes}m";
+        }
+        return $"{duration.Minutes}m";
+    }
+
+    private string TruncateDescription(string description)
+    {
+        if (string.IsNullOrEmpty(description) || description.Length <= 100)
+            return description ?? string.Empty;
+
+        return description.Substring(0, 100) + "...";
+    }
+}

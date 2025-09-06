@@ -1,0 +1,235 @@
+﻿@page "/shows"
+@using System.Text.Json
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">Available Shows</h2>
+
+            @if (isLoading)
+            {
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else if (shows == null || !shows.Any())
+            {
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    No shows available at the moment.
+                </div>
+            }
+            else
+            {
+                <div class="card shadow-sm">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">Poster</th>
+                                        <th scope="col">Movie</th>
+                                        <th scope="col">Hall</th>
+                                        <th scope="col">Start Time</th>
+                                        <th scope="col">End Time</th>
+                                        <th scope="col">Price</th>
+                                        <th scope="col" class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var show in shows)
+                                    {
+                                        <tr>
+                                            <td style="width: 80px;">
+                                                @if (!string.IsNullOrEmpty(show.Movie?.PosterUrl))
+                                                {
+                                                    <img src="@show.Movie.PosterUrl"
+                                                         alt="@show.Movie.Title poster"
+                                                         class="img-thumbnail"
+                                                         style="width: 60px; height: 80px; object-fit: cover;"
+                                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/60x80/6c757d/ffffff?text=No+Image';">
+                                                }
+                                                else
+                                                {
+                                                    <div class="bg-light rounded d-flex align-items-center justify-content-center text-muted"
+                                                         style="width: 60px; height: 80px; font-size: 10px;">
+                                                        <span>No Image</span>
+                                                    </div>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="fw-medium">@show.Movie?.Title</div>
+                                                @if (!string.IsNullOrEmpty(show.Movie?.Description))
+                                                {
+                                                    <small class="text-muted">@(show.Movie.Description.Length > 50 ? show.Movie.Description.Substring(0, 50) + "..." : show.Movie.Description)</small>
+                                                }
+                                                @if (show.Movie?.Rating > 0)
+                                                {
+                                                    <div><small class="badge bg-warning text-dark">⭐ @show.Movie.Rating</small></div>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">Hall @show.HallId</span>
+                                                @if (!string.IsNullOrEmpty(show.Hall?.Name))
+                                                {
+                                                    <div><small class="text-muted">@show.Hall.Name</small></div>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="fw-medium">@show.StartTime.ToString("MMM dd")</div>
+                                                <small class="text-muted">@show.StartTime.ToString("HH:mm")</small>
+                                            </td>
+                                            <td>
+                                                <div class="fw-medium">@show.EndTime.ToString("MMM dd")</div>
+                                                <small class="text-muted">@show.EndTime.ToString("HH:mm")</small>
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold text-success">${@show.Price}</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-primary btn-sm"
+                                                        @onclick="() => BookShow(show.Id)"
+                                                        disabled="@isBooking">
+                                                    @if (isBooking && bookingShowId == show.Id)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                        <span>Loading...</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="bi bi-ticket-perforated me-1"></i>
+                                                        <span>Book</span>
+                                                    }
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mt-3">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    @errorMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success mt-3">
+                    <i class="bi bi-check-circle me-2"></i>
+                    @successMessage
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Show>? shows;
+    private bool isLoading = true;
+    private bool isBooking = false;
+    private int bookingShowId = 0;
+    private string errorMessage = "";
+    private string successMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadShows();
+    }
+
+    private async Task LoadShows()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = "";
+
+            var response = await Http.GetAsync("/api/v1/Show/GetAll");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonString = await response.Content.ReadAsStringAsync();
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                shows = JsonSerializer.Deserialize<List<Show>>(jsonString, options) ?? new List<Show>();
+            }
+            else
+            {
+                errorMessage = $"Failed to load shows. Status: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading shows: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task BookShow(int showId)
+    {
+        try
+        {
+            isBooking = true;
+            bookingShowId = showId;
+            successMessage = "";
+            errorMessage = "";
+
+            // Navigate directly to the booking detail page
+            Navigation.NavigateTo($"/show/{showId}/book");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error during navigation: {ex.Message}";
+        }
+        finally
+        {
+            isBooking = false;
+            bookingShowId = 0;
+        }
+    }
+
+    // Data models
+    public class Show
+    {
+        public int Id { get; set; }
+        public int MovieId { get; set; }
+        public Movie? Movie { get; set; }
+        public int HallId { get; set; }
+        public Hall? Hall { get; set; }
+        public decimal Price { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+    }
+
+    public class Movie
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public double Rating { get; set; }
+        public string Duration { get; set; } = "";
+        public string PosterUrl { get; set; } = "";
+    }
+
+    public class Hall
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+    }
+}
