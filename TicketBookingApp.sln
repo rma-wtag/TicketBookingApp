@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36301.6
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TicketBookingApp", "TicketBookingApp\TicketBookingApp.csproj", "{1D057E74-0CD3-49C6-BD12-7799B0133956}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorApp", "BlazorApp\BlazorApp.csproj", "{777F051D-04D3-4B57-8CD3-E01D600B18AD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{1D057E74-0CD3-49C6-BD12-7799B0133956}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1D057E74-0CD3-49C6-BD12-7799B0133956}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1D057E74-0CD3-49C6-BD12-7799B0133956}.Release|Any CPU.Build.0 = Release|Any CPU
+		{777F051D-04D3-4B57-8CD3-E01D600B18AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{777F051D-04D3-4B57-8CD3-E01D600B18AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{777F051D-04D3-4B57-8CD3-E01D600B18AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{777F051D-04D3-4B57-8CD3-E01D600B18AD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

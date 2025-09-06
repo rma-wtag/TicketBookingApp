@@ -1,3 +1,5 @@
+using DocumentFormat.OpenXml.Math;
+using DocumentFormat.OpenXml.Presentation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -117,8 +119,8 @@ namespace JWTDemo
 
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowBlazorClient",
-                    policy => policy.WithOrigins("https://localhost:7079")
+                options.AddPolicy("AllowReactClient",
+                    policy => policy.WithOrigins("https://localhost:7143")
                                     .AllowAnyHeader()
                                     .AllowAnyMethod()
                                     .AllowCredentials());
@@ -140,7 +142,7 @@ namespace JWTDemo
            
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseCors("AllowBlazorClient");
+            app.UseCors("AllowReactClient");
             app.MapControllers();
 
             app.Run();

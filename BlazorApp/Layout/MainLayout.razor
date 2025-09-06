@@ -1,0 +1,47 @@
+﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@using BlazorApp.Services
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+    <main>
+        <div class="top-row px-4">
+            <AuthorizeView>
+                <Authorized>
+                    <div class="auth-info">
+                        Welcome, @context.User.Identity?.Name
+                        <button class="btn btn-link" @onclick="HandleLogout">Logout</button>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="/login">Login</a><a href="/register">Register</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    [Inject] private IAuthService? AuthService { get; set; }
+    [Inject] private NavigationManager? Navigation { get; set; }
+
+    private async Task HandleLogout()
+    {
+        if (AuthService != null && Navigation != null)
+        {
+            await AuthService.LogoutAsync();
+            Navigation.NavigateTo("/login", true);
+        }
+    }
+
+    private string GetUserName(AuthenticationState authState)
+    {
+        var usernameClaim = authState.User?.FindFirst("sub") ?? authState.User?.FindFirst("unique_name");
+        return usernameClaim?.Value ?? "User";
+    }
+}
