@@ -1,3 +1,5 @@
+using Azure.Storage.Blobs;
+using Azure.Storage.Queues;
 using DocumentFormat.OpenXml.Math;
 using DocumentFormat.OpenXml.Presentation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -5,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using TicketBookingApp.AzureServices;
 using TicketBookingApp.Dtos.MovieDtos;
 using TicketBookingApp.Dtos.ShowDtos;
 using TicketBookingApp.Entities;
@@ -38,6 +41,10 @@ namespace JWTDemo
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
             builder.Services.AddScoped<UnitOfWork>();
+
+            //Azure Services
+            builder.Services.AddSingleton(x => new BlobServiceClient(builder.Configuration["AzureStorage:ConnectionString"]));
+            builder.Services.AddScoped<IAzureBlobService, AzureBlobService>();
 
             builder.Services.AddMemoryCache();
             
