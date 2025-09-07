@@ -1,0 +1,69 @@
+﻿@page "/payment/success"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@using Microsoft.JSInterop
+
+<h3>Payment Success</h3>
+
+@if (loading)
+{
+    <p>Processing...</p>
+}
+else if (!string.IsNullOrEmpty(bookingId))
+{
+    <div class="alert alert-success">
+        <strong>Payment Successful!</strong> 🎉<br /><br />
+        Booking ID: @bookingId <br /><br />
+
+        <button class="btn btn-primary" @onclick="DownloadTicket">Download Ticket</button>
+    </div>
+}
+else
+{
+    <div class="alert alert-danger">
+        <strong>Error:</strong> Booking ID not found.
+    </div>
+}
+
+@code {
+    private bool loading = true;
+    private string? bookingId;
+
+    [Inject] IJSRuntime JS { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        bookingId = queryParams["tran_id"];
+        loading = false;
+    }
+
+    private async Task DownloadTicket()
+    {
+        if (string.IsNullOrEmpty(bookingId))
+            return;
+
+        try
+        {
+            // Call your .NET Web API to get the PDF bytes
+            var response = await Http.GetAsync($"/api/v1/Booking/GenerateTicket/{bookingId}");
+            response.EnsureSuccessStatusCode();
+
+            var pdfBytes = await response.Content.ReadAsByteArrayAsync();
+            var fileName = $"Ticket_{bookingId}.pdf";
+
+            // Trigger download in browser
+            await JS.InvokeVoidAsync(
+                "BlazorDownloadFile",
+                fileName,
+                "application/pdf",
+                Convert.ToBase64String(pdfBytes)
+            );
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("alert", "Failed to download ticket.");
+        }
+    }
+}

@@ -1,5 +1,7 @@
 ﻿@page "/show/{ShowId:int}/book"
 @using System.Text.Json
+@using Microsoft.AspNetCore.Components.Authorization
+@using BlazorApp.Services
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
@@ -121,7 +123,7 @@
                 </div>
 
                 <!-- Seat Selection Card -->
-                <div class="card shadow-sm mt-4">
+                <div class="card shadow-sm mt-4 mb-4">
                     <div class="card-header bg-info text-white">
                         <h5 class="mb-0">
                             <i class="bi bi-grid-3x3 me-2"></i>
@@ -425,7 +427,7 @@
     private Show? show;
     private List<Seat>? availableSeats;
     private HashSet<int> selectedSeatIds = new();
-    
+
     private bool isLoading = true;
     private bool isLoadingSeats = true;
     private bool isBooking = false;
@@ -588,9 +590,8 @@
         {
             isBooking = true;
 
-            // First, re-check seat availability
+            // STEP 1: Verify seat availability again
             var availabilityResponse = await Http.GetAsync($"/api/v1/Booking/AvailableSeats/{ShowId}");
-            
             if (!availabilityResponse.IsSuccessStatusCode)
             {
                 ShowModal("Connection Error", "Failed to verify seat availability. Please check your connection and try again.", "error");
@@ -598,93 +599,62 @@
             }
 
             var availabilityJson = await availabilityResponse.Content.ReadAsStringAsync();
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var currentlyAvailableSeats = JsonSerializer.Deserialize<List<Seat>>(availabilityJson, options) ?? new List<Seat>();
-            
-            // Get the IDs of currently available seats
+
             var currentlyAvailableSeatIds = currentlyAvailableSeats.Select(s => s.Id).ToHashSet();
-            
-            // Check if any of the selected seats are no longer available
+
             var unavailableSeats = selectedSeatIds.Where(id => !currentlyAvailableSeatIds.Contains(id)).ToList();
-            
             if (unavailableSeats.Any())
             {
-                // Get seat numbers for the unavailable seats
-                var unavailableSeatNumbers = new List<string>();
-                foreach (var unavailableSeatId in unavailableSeats)
-                {
-                    var seat = availableSeats?.FirstOrDefault(s => s.Id == unavailableSeatId);
-                    if (seat != null)
-                    {
-                        unavailableSeatNumbers.Add(seat.SeatNumber);
-                    }
-                }
-                
-                // Remove unavailable seats from selection
-                foreach (var unavailableSeatId in unavailableSeats)
-                {
-                    selectedSeatIds.Remove(unavailableSeatId);
-                }
-                
-                // Show modal notification
+                // Get seat numbers for unavailable seats
+                var unavailableSeatNumbers = unavailableSeats
+                    .Select(unavailableSeatId => availableSeats?.FirstOrDefault(s => s.Id == unavailableSeatId)?.SeatNumber)
+                    .Where(sn => sn != null)
+                    .ToList()!;
+
+                // Remove them from selection
+                foreach (var id in unavailableSeats)
+                    selectedSeatIds.Remove(id);
+
                 var seatList = string.Join(", ", unavailableSeatNumbers);
                 var seatWord = unavailableSeats.Count == 1 ? "seat" : "seats";
                 var hasHave = unavailableSeats.Count == 1 ? "has" : "have";
                 var isAre = unavailableSeats.Count == 1 ? "is" : "are";
-                
+
                 var modalMessage = $"Sorry, the following {seatWord} {seatList} {isAre} no longer available and {hasHave} been removed from your selection.";
-                
-                if (selectedSeatIds.Any())
-                {
-                    modalMessage += " You can proceed with your remaining selection or choose different seats.";
-                }
-                else
-                {
-                    modalMessage += " Please select new seats to continue.";
-                }
-                
+                modalMessage += selectedSeatIds.Any()
+                    ? " You can proceed with your remaining selection or choose different seats."
+                    : " Please select new seats to continue.";
+
                 ShowModal("Seats No Longer Available", modalMessage, "warning");
-                
-                // Refresh the seat map to show current availability
+
                 await LoadAvailableSeats();
                 StateHasChanged();
                 return;
             }
 
-            // If we reach here, all selected seats are still available
+            // STEP 2: Proceed with booking
             var bookingRequest = new BookingRequest
-            {
-                UserId = 1, // You'll need to get the actual user ID from authentication
-                ShowId = ShowId,
-                SelectedSeatIds = selectedSeatIds.ToList()
-            };
+        {
+            UserId = 1, // Replace with logged-in user
+            ShowId = ShowId,
+            SelectedSeatIds = selectedSeatIds.ToList()
+        };
 
             var json = JsonSerializer.Serialize(bookingRequest);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-            var response = await Http.PostAsync("/api/v1/Booking", content);
+            var bookingResponse = await Http.PostAsync("/api/v1/Booking", content);
 
-            if (response.IsSuccessStatusCode)
+            if (!bookingResponse.IsSuccessStatusCode)
             {
-                // Show success modal before navigation
-                ShowModal("Booking Confirmed!", "Your tickets have been successfully booked. Redirecting to confirmation page...", "success", true);
-                
-                // Small delay to let user see the success message
-                await Task.Delay(2000);
-                Navigation.NavigateTo($"/booking-confirmation?showId={ShowId}&seats={string.Join(",", selectedSeatIds)}&total={show!.Price * selectedSeatIds.Count}");
-            }
-            else
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                
-                // Check if the error is related to seat availability (common booking conflict scenario)
-                if (errorContent.ToLower().Contains("seat") && (errorContent.ToLower().Contains("unavailable") || errorContent.ToLower().Contains("occupied") || errorContent.ToLower().Contains("booked")))
+                var errorContent = await bookingResponse.Content.ReadAsStringAsync();
+
+                if (errorContent.ToLower().Contains("seat") &&
+                    (errorContent.ToLower().Contains("unavailable") || errorContent.ToLower().Contains("occupied") || errorContent.ToLower().Contains("booked")))
                 {
                     ShowModal("Booking Conflict", "One or more selected seats have been booked by another user. The seat map has been refreshed. Please select different seats.", "error");
-                    // Refresh the seat map
                     await LoadAvailableSeats();
                     selectedSeatIds.Clear();
                 }
@@ -692,7 +662,50 @@
                 {
                     ShowModal("Booking Failed", $"Unable to complete your booking: {errorContent}", "error");
                 }
+                return;
             }
+
+            // STEP 3: Parse booking response to get payment info
+            var bookingJson = await bookingResponse.Content.ReadAsStringAsync();
+            var bookingResult = JsonSerializer.Deserialize<BookingResponse>(bookingJson, options);
+
+            if (bookingResult?.Payment == null)
+            {
+                ShowModal("Payment Error", "Booking was created but payment information is missing.", "error");
+                return;
+            }
+
+            // STEP 4: Create Payment Session
+            var paymentSessionRequest = new PaymentSessionRequest
+            {
+                BookingId = bookingResult.Id,
+                CusName = "Demo Customer",           // TODO: Replace with actual user name
+                CusEmail = "demo@example.com",       // TODO: Replace with actual user email
+                Amount = bookingResult.Payment.Amount
+            };
+
+            var paymentJson = JsonSerializer.Serialize(paymentSessionRequest);
+            var paymentContent = new StringContent(paymentJson, System.Text.Encoding.UTF8, "application/json");
+
+            var paymentResponse = await Http.PostAsync("/api/v1/Payment/session", paymentContent);
+
+            if (!paymentResponse.IsSuccessStatusCode)
+            {
+                ShowModal("Payment Error", "Failed to initiate payment session. Please try again.", "error");
+                return;
+            }
+
+            var paymentResponseJson = await paymentResponse.Content.ReadAsStringAsync();
+            var paymentResult = JsonSerializer.Deserialize<PaymentSessionResponse>(paymentResponseJson, options);
+
+            if (string.IsNullOrEmpty(paymentResult?.GatewayUrl))
+            {
+                ShowModal("Payment Error", "Invalid payment gateway response.", "error");
+                return;
+            }
+
+            // STEP 5: Redirect user to payment gateway
+            Navigation.NavigateTo(paymentResult.GatewayUrl, forceLoad: true);
         }
         catch (Exception ex)
         {
@@ -704,6 +717,7 @@
             StateHasChanged();
         }
     }
+
 
     private void GoBack()
     {
@@ -800,4 +814,39 @@
         public int ShowId { get; set; }
         public List<int> SelectedSeatIds { get; set; } = new();
     }
+
+    public class BookingResponse
+    {
+        public int Id { get; set; }
+        public int UserId { get; set; }
+        public int ShowId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public bool IsCompleted { get; set; }
+        public PaymentInfo? Payment { get; set; }
+        public List<BookingSeat> BookingSeats { get; set; } = new();
+    }
+
+    public class PaymentInfo
+    {
+        public int Id { get; set; }
+        public int PaymentStatus { get; set; }
+        public decimal Amount { get; set; }
+        public DateTime DateTime { get; set; }
+        public int BookingId { get; set; }
+    }
+
+    public class PaymentSessionRequest
+    {
+        public int BookingId { get; set; }
+        public string CusName { get; set; } = "";
+        public string CusEmail { get; set; } = "";
+        public decimal Amount { get; set; }
+    }
+
+    public class PaymentSessionResponse
+    {
+        public string Status { get; set; } = "";
+        public string GatewayUrl { get; set; } = "";
+    }
+
 }

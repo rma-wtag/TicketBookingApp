@@ -5,7 +5,8 @@ namespace TicketBookingApp.Models.PaymentGwModels
 {
     public class PaymentSessionRequest
     {
-        public int PaymentId { get; set; }
+        [Required(ErrorMessage = "Booking ID is required.")]
+        public int BookingId { get; set; }
         [Required(ErrorMessage = "Customer Name is required.")]
         public string CusName { get; set; } = default!;
         [Required(ErrorMessage = "Customer Email is required.")]

@@ -35,6 +35,19 @@ namespace TicketBookingApp.Controllers
             return Ok(booking);
         }
 
+        [HttpGet("GenerateTicket/{id}")]
+        public async Task<IActionResult> GenerateTicketByBookingIdAsync([FromRoute] int id)
+        {
+            var result = await _repo.GenerateTicketByBookingIdAsync(id);
+
+            if (result == null)
+            {
+                return NotFound("Booking not found or not completed");
+            }
+
+            return File(result.Value.pdfBytes, "application/pdf", result.Value.fileName);
+        }
+
         //To book, I need to get available seats for a specific show, using showId and HallId
         [HttpGet("AvailableSeats/{showId}")]
         public async Task<ActionResult<IEnumerable<Seat>>> GetAvailableSeats([FromRoute] int showId) {

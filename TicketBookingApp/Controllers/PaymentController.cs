@@ -26,7 +26,7 @@ namespace TicketBookingApp.Controllers
         {
             { "total_amount", req.Amount.ToString("0.0") },
             { "currency", "BDT" },
-            { "tran_id", req.PaymentId.ToString() },
+            { "tran_id", req.BookingId.ToString() },
 
             { "success_url", "https://localhost:7064/api/v1/Payment/success" },
             { "fail_url", "https://localhost:7064/api/v1/Payment/fail" },
@@ -63,20 +63,22 @@ namespace TicketBookingApp.Controllers
             var validation = await _ssl.ValidateAsync(val_id, ct);
             if (validation is null) return BadRequest();
 
-            if (!int.TryParse(tran_id, out var paymentId))
-                return BadRequest(new { error = "Invalid payment id" });
+            if (!int.TryParse(tran_id, out var BookingId))
+                return BadRequest(new { error = "Invalid booking id" });
 
-            var payment = await _context.Payments
-                .Include(p=>p.Booking)
-                .FirstOrDefaultAsync(p => p.Id == paymentId, ct);
+            var booking = await _context.Bookings
+                                        .Include(b => b.Payment)
+                                        .FirstOrDefaultAsync(b => b.Id == BookingId, ct);
 
-            if (payment == null) return NotFound(new { error = "Payment not found" });
+            if (booking == null) return NotFound(new { error = "Booking not found" });
 
-            payment.PaymentStatus = Models.PaymentStatus.Success;
-            payment.Booking.IsCompleted = true;
+            // Update database
+            booking.Payment.PaymentStatus = Models.PaymentStatus.Success;
+            booking.IsCompleted = true;
             await _context.SaveChangesAsync(ct);
 
-            return Ok(new { status = "success", transaction = validation.RootElement });
+            //Redirect to Blazor front-end page
+            return Redirect($"https://localhost:7143/payment/success?tran_id={tran_id}");
         }
 
         [HttpPost("fail")]
