@@ -12,7 +12,7 @@ using TicketBookingApp.Entities;
 namespace TicketBookingApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250904075553_mig1")]
+    [Migration("20250907035313_mig1")]
     partial class mig1
     {
         /// <inheritdoc />

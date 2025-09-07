@@ -119,6 +119,87 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Seat Selection Card -->
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-grid-3x3 me-2"></i>
+                            Select Your Seats
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (isLoadingSeats)
+                        {
+                            <div class="text-center">
+                                <div class="spinner-border text-info" role="status">
+                                    <span class="visually-hidden">Loading seats...</span>
+                                </div>
+                                <p class="text-muted mt-2">Loading available seats...</p>
+                            </div>
+                        }
+                        else if (availableSeats?.Any() == true)
+                        {
+                            <!-- Screen -->
+                            <div class="text-center mb-4">
+                                <div class="bg-dark text-white py-2 px-4 rounded-pill d-inline-block">
+                                    <i class="bi bi-camera-reels me-2"></i>
+                                    SCREEN
+                                </div>
+                            </div>
+
+                            <!-- Legend -->
+                            <div class="d-flex justify-content-center gap-4 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="seat-legend available me-2"></div>
+                                    <small>Available</small>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <div class="seat-legend selected me-2"></div>
+                                    <small>Selected</small>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <div class="seat-legend occupied me-2"></div>
+                                    <small>Occupied</small>
+                                </div>
+                            </div>
+
+                            <!-- Seat Grid -->
+                            <div class="seat-grid">
+                                @for (int row = 0; row < 8; row++)
+                                {
+                                    <div class="seat-row d-flex justify-content-center mb-2">
+                                        <div class="row-label me-3 d-flex align-items-center">
+                                            <strong>@((char)('A' + row))</strong>
+                                        </div>
+                                        @for (int col = 0; col < 5; col++)
+                                        {
+                                            int seatIndex = row * 5 + col;
+                                            var seat = availableSeats[seatIndex];
+                                            var isSelected = selectedSeatIds.Contains(seat.Id);
+                                            var isOccupied = seat.BookingSeats?.Any() == true;
+
+                                            <button class="seat-button @GetSeatClass(seat, isSelected, isOccupied)"
+                                                    @onclick="() => ToggleSeat(seat)"
+                                                    disabled="@isOccupied"
+                                                    title="Seat @seat.SeatNumber">
+                                                @seat.SeatNumber.Replace("S", "")
+                                            </button>
+                                        }
+                                    </div>
+                                }
+
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted">
+                                <i class="bi bi-exclamation-circle fs-1"></i>
+                                <p class="mt-2">No seats available for this show</p>
+                            </div>
+                        }
+                    </div>
+                </div>
             </div>
 
             <!-- Booking Panel -->
@@ -131,68 +212,72 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div class="mb-4">
-                            <label for="quantity" class="form-label fw-medium">
-                                <i class="bi bi-people me-1"></i>
-                                Number of Tickets
-                            </label>
-                            <div class="input-group">
-                                <button class="btn btn-outline-secondary"
-                                        type="button"
-                                        @onclick="DecreaseQuantity"
-                                        disabled="@(quantity <= 1)">
-                                    <i class="bi bi-dash"></i>
-                                </button>
-                                <input type="number"
-                                       id="quantity"
-                                       class="form-control text-center fw-bold"
-                                       @bind="quantity"
-                                       @bind:event="oninput"
-                                       min="1"
-                                       max="10"
-                                       readonly>
-                                <button class="btn btn-outline-secondary"
-                                        type="button"
-                                        @onclick="IncreaseQuantity"
-                                        disabled="@(quantity >= 10)">
-                                    <i class="bi bi-plus"></i>
-                                </button>
+                        @if (selectedSeatIds.Any())
+                        {
+                            <!-- Selected Seats -->
+                            <div class="mb-4">
+                                <label class="form-label fw-medium">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    Selected Seats
+                                </label>
+                                <div class="selected-seats-container">
+                                    @foreach (var seatId in selectedSeatIds)
+                                    {
+                                        var seat = availableSeats?.FirstOrDefault(s => s.Id == seatId);
+                                        if (seat != null)
+                                        {
+                                            <span class="badge bg-primary me-2 mb-2">
+                                                @seat.SeatNumber
+                                                <button type="button" class="btn-close btn-close-white ms-2" 
+                                                        style="font-size: 0.65em;"
+                                                        @onclick="() => RemoveSeat(seatId)"
+                                                        title="Remove seat"></button>
+                                            </span>
+                                        }
+                                    }
+                                </div>
                             </div>
-                            <small class="text-muted">Maximum 10 tickets per booking</small>
-                        </div>
 
-                        <!-- Price Summary -->
-                        <div class="bg-light rounded p-3 mb-4">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Ticket Price:</span>
-                                <span>${@show.Price}</span>
+                            <!-- Price Summary -->
+                            <div class="bg-light rounded p-3 mb-4">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Ticket Price:</span>
+                                    <span>${@show.Price}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Selected Seats:</span>
+                                    <span>@selectedSeatIds.Count</span>
+                                </div>
+                                <hr class="my-2">
+                                <div class="d-flex justify-content-between fw-bold fs-5">
+                                    <span>Total:</span>
+                                    <span class="text-success">${@(show.Price * selectedSeatIds.Count)}</span>
+                                </div>
                             </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Quantity:</span>
-                                <span>@quantity</span>
-                            </div>
-                            <hr class="my-2">
-                            <div class="d-flex justify-content-between fw-bold fs-5">
-                                <span>Total:</span>
-                                <span class="text-success">${@(show.Price* quantity)}</span>
-                            </div>
-                        </div>
 
-                        <!-- Book Button -->
-                        <button class="btn btn-success w-100 btn-lg"
-                                @onclick="ProceedToBooking"
-                                disabled="@isBooking">
-                            @if (isBooking)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                <span>Processing...</span>
-                            }
-                            else
-                            {
-                                <i class="bi bi-credit-card me-2"></i>
-                                <span>Proceed to Payment</span>
-                            }
-                        </button>
+                            <!-- Book Button -->
+                            <button class="btn btn-success w-100 btn-lg"
+                                    @onclick="ConfirmBooking"
+                                    disabled="@isBooking">
+                                @if (isBooking)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    <span>Processing...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-credit-card me-2"></i>
+                                    <span>Confirm Booking (@selectedSeatIds.Count @(selectedSeatIds.Count == 1 ? "seat" : "seats"))</span>
+                                }
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted">
+                                <i class="bi bi-hand-index fs-1 mb-3"></i>
+                                <p>Please select your seats from the seat map to proceed with booking.</p>
+                            </div>
+                        }
 
                         <div class="text-center mt-3">
                             <small class="text-muted">
@@ -215,18 +300,111 @@
     }
 </div>
 
+<!-- Custom Styles -->
+<style>
+    .seat-grid {
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    .seat-row {
+        margin-bottom: 8px;
+    }
+
+    .row-label {
+        width: 30px;
+        font-size: 14px;
+        color: #6c757d;
+    }
+
+    .seat-button {
+        width: 35px;
+        height: 35px;
+        margin: 2px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        background-color: #28a745;
+        color: white;
+        font-size: 11px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .seat-button:hover:not(:disabled) {
+        transform: scale(1.1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .seat-button.available {
+        background-color: #28a745;
+        border-color: #1e7e34;
+    }
+
+    .seat-button.selected {
+        background-color: #007bff;
+        border-color: #0056b3;
+        transform: scale(1.05);
+    }
+
+    .seat-button.occupied {
+        background-color: #6c757d;
+        border-color: #545b62;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .seat-legend {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        border: 2px solid #dee2e6;
+    }
+
+    .seat-legend.available {
+        background-color: #28a745;
+        border-color: #1e7e34;
+    }
+
+    .seat-legend.selected {
+        background-color: #007bff;
+        border-color: #0056b3;
+    }
+
+    .seat-legend.occupied {
+        background-color: #6c757d;
+        border-color: #545b62;
+    }
+
+    .selected-seats-container {
+        max-height: 120px;
+        overflow-y: auto;
+    }
+
+    .btn-close-white {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+</style>
+
 @code {
     [Parameter] public int ShowId { get; set; }
 
     private Show? show;
+    private List<Seat>? availableSeats;
+    private HashSet<int> selectedSeatIds = new();
+    
     private bool isLoading = true;
+    private bool isLoadingSeats = true;
     private bool isBooking = false;
     private string errorMessage = "";
-    private int quantity = 1;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadShow();
+        await LoadAvailableSeats();
     }
 
     private async Task LoadShow()
@@ -266,38 +444,141 @@
         }
     }
 
-    private void IncreaseQuantity()
+private async Task LoadAvailableSeats()
+{
+    try
     {
-        if (quantity < 10)
+        isLoadingSeats = true;
+
+        var response = await Http.GetAsync($"/api/v1/Booking/AvailableSeats/{ShowId}");
+
+        if (response.IsSuccessStatusCode)
         {
-            quantity++;
+            var jsonString = await response.Content.ReadAsStringAsync();
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            var fetchedSeats = JsonSerializer.Deserialize<List<Seat>>(jsonString, options) ?? new List<Seat>();
+
+            // Create full 40 seats (S01 to S40)
+            var fullSeats = new List<Seat>();
+
+            for (int i = 1; i <= 40; i++)
+            {
+                string seatNumber = $"S{i:D2}"; // S01, S02, ..., S40
+
+                // Try to find this seat in the API response
+                var seatFromApi = fetchedSeats.FirstOrDefault(s =>
+                    s.SeatNumber.Equals(seatNumber, StringComparison.OrdinalIgnoreCase));
+
+                if (seatFromApi != null)
+                {
+                    // Seat is available
+                    fullSeats.Add(seatFromApi);
+                }
+                else
+                {
+                    // Seat is occupied → placeholder with BookingSeats so it's shown as unavailable
+                    fullSeats.Add(new Seat
+                    {
+                        Id = -i, // temporary negative ID to avoid collision
+                        SeatNumber = seatNumber,
+                        BookingSeats = new List<BookingSeat> { new BookingSeat() }
+                    });
+                }
+            }
+
+            availableSeats = fullSeats;
+        }
+        else
+        {
+            errorMessage = $"Failed to load available seats. Status: {response.StatusCode}";
+            availableSeats = new List<Seat>();
         }
     }
-
-    private void DecreaseQuantity()
+    catch (Exception ex)
     {
-        if (quantity > 1)
-        {
-            quantity--;
-        }
+        errorMessage = $"Error loading available seats: {ex.Message}";
+        availableSeats = new List<Seat>();
+    }
+    finally
+    {
+        isLoadingSeats = false;
+    }
+}
+
+
+
+    private void ToggleSeat(Seat? seat)
+{
+    if (seat == null || (seat.BookingSeats?.Any() == true)) // occupied
+        return;
+
+    if (selectedSeatIds.Contains(seat.Id))
+        selectedSeatIds.Remove(seat.Id);
+    else
+        selectedSeatIds.Add(seat.Id);
+
+    StateHasChanged();
+}
+
+
+    private Seat? GetSeatInfo(string seatCode)
+    {
+        return availableSeats?.FirstOrDefault(s => s.SeatNumber.Equals(seatCode, StringComparison.OrdinalIgnoreCase));
     }
 
-    private async Task ProceedToBooking()
+    private void RemoveSeat(int seatId)
     {
+        selectedSeatIds.Remove(seatId);
+        StateHasChanged();
+    }
+
+    private string GetSeatClass(Seat? seat, bool isSelected, bool isOccupied)
+    {
+        if (isOccupied || seat == null)
+            return "occupied";
+        if (isSelected)
+            return "selected";
+        return "available";
+    }
+
+    private async Task ConfirmBooking()
+    {
+        if (!selectedSeatIds.Any())
+        {
+            errorMessage = "Please select at least one seat.";
+            return;
+        }
+
         try
         {
             isBooking = true;
+            errorMessage = "";
 
-            // Here you would typically:
-            // 1. Validate availability
-            // 2. Reserve seats temporarily
-            // 3. Navigate to payment page
+            var bookingRequest = new BookingRequest
+            {
+                UserId = 1, // You'll need to get the actual user ID from authentication
+                ShowId = ShowId,
+                SelectedSeatIds = selectedSeatIds.ToList()
+            };
 
-            // For now, simulate processing time
-            await Task.Delay(2000);
+            var json = JsonSerializer.Serialize(bookingRequest);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-            // Navigate to payment or confirmation page
-            Navigation.NavigateTo($"/payment?showId={ShowId}&quantity={quantity}&total={show!.Price * quantity}");
+            var response = await Http.PostAsync("/api/v1/Booking", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Navigate to confirmation page or show success message
+                Navigation.NavigateTo($"/booking-confirmation?showId={ShowId}&seats={string.Join(",", selectedSeatIds)}&total={show!.Price * selectedSeatIds.Count}");
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Booking failed: {errorContent}";
+            }
         }
         catch (Exception ex)
         {
@@ -314,7 +595,7 @@
         Navigation.NavigateTo("/shows");
     }
 
-    // Data models (same as in ShowsPage)
+    // Data models
     public class Show
     {
         public int Id { get; set; }
@@ -341,5 +622,28 @@
     {
         public int Id { get; set; }
         public string Name { get; set; } = "";
+    }
+
+    public class Seat
+    {
+        public int Id { get; set; }
+        public string SeatNumber { get; set; } = "";
+        public int HallId { get; set; }
+        public Hall? Hall { get; set; }
+        public List<BookingSeat>? BookingSeats { get; set; }
+    }
+
+    public class BookingSeat
+    {
+        public int Id { get; set; }
+        public int BookingId { get; set; }
+        public int SeatId { get; set; }
+    }
+
+    public class BookingRequest
+    {
+        public int UserId { get; set; }
+        public int ShowId { get; set; }
+        public List<int> SelectedSeatIds { get; set; } = new();
     }
 }
