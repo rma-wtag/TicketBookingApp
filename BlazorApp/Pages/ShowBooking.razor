@@ -290,15 +290,45 @@
             </div>
         </div>
     }
-
-    @if (!string.IsNullOrEmpty(errorMessage))
-    {
-        <div class="alert alert-danger mt-3">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            @errorMessage
-        </div>
-    }
 </div>
+
+<!-- Bootstrap Notification Modal -->
+@if (showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header @GetModalHeaderClass()">
+                    <h5 class="modal-title d-flex align-items-center">
+                        <i class="@GetModalIconClass() me-2 fs-4"></i>
+                        @modalTitle
+                    </h5>
+                    @if (!isRedirecting)
+                    {
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+                    }
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">@modalMessage</p>
+                    @if (isRedirecting)
+                    {
+                        <div class="text-center mt-3">
+                            <div class="spinner-border spinner-border-sm text-success" role="status">
+                                <span class="visually-hidden">Redirecting...</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+                @if (!isRedirecting)
+                {
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">Close</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
 
 <!-- Custom Styles -->
 <style>
@@ -399,7 +429,13 @@
     private bool isLoading = true;
     private bool isLoadingSeats = true;
     private bool isBooking = false;
-    private string errorMessage = "";
+
+    // Modal properties
+    private bool showModal = false;
+    private string modalTitle = "";
+    private string modalMessage = "";
+    private string modalType = "info"; // info, success, warning, error
+    private bool isRedirecting = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -412,7 +448,6 @@
         try
         {
             isLoading = true;
-            errorMessage = "";
 
             var response = await Http.GetAsync($"/api/v1/Show/{ShowId}");
 
@@ -427,16 +462,16 @@
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                errorMessage = "Show not found. It may have been cancelled or removed.";
+                ShowModal("Show Not Found", "Show not found. It may have been cancelled or removed.", "error");
             }
             else
             {
-                errorMessage = $"Failed to load show details. Status: {response.StatusCode}";
+                ShowModal("Loading Error", $"Failed to load show details. Status: {response.StatusCode}", "error");
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error loading show details: {ex.Message}";
+            ShowModal("Connection Error", $"Error loading show details: {ex.Message}", "error");
         }
         finally
         {
@@ -444,85 +479,82 @@
         }
     }
 
-private async Task LoadAvailableSeats()
-{
-    try
+    private async Task LoadAvailableSeats()
     {
-        isLoadingSeats = true;
-
-        var response = await Http.GetAsync($"/api/v1/Booking/AvailableSeats/{ShowId}");
-
-        if (response.IsSuccessStatusCode)
+        try
         {
-            var jsonString = await response.Content.ReadAsStringAsync();
-            var options = new JsonSerializerOptions
+            isLoadingSeats = true;
+
+            var response = await Http.GetAsync($"/api/v1/Booking/AvailableSeats/{ShowId}");
+
+            if (response.IsSuccessStatusCode)
             {
-                PropertyNameCaseInsensitive = true
-            };
-            var fetchedSeats = JsonSerializer.Deserialize<List<Seat>>(jsonString, options) ?? new List<Seat>();
-
-            // Create full 40 seats (S01 to S40)
-            var fullSeats = new List<Seat>();
-
-            for (int i = 1; i <= 40; i++)
-            {
-                string seatNumber = $"S{i:D2}"; // S01, S02, ..., S40
-
-                // Try to find this seat in the API response
-                var seatFromApi = fetchedSeats.FirstOrDefault(s =>
-                    s.SeatNumber.Equals(seatNumber, StringComparison.OrdinalIgnoreCase));
-
-                if (seatFromApi != null)
+                var jsonString = await response.Content.ReadAsStringAsync();
+                var options = new JsonSerializerOptions
                 {
-                    // Seat is available
-                    fullSeats.Add(seatFromApi);
-                }
-                else
+                    PropertyNameCaseInsensitive = true
+                };
+                var fetchedSeats = JsonSerializer.Deserialize<List<Seat>>(jsonString, options) ?? new List<Seat>();
+
+                // Create full 40 seats (S01 to S40)
+                var fullSeats = new List<Seat>();
+
+                for (int i = 1; i <= 40; i++)
                 {
-                    // Seat is occupied → placeholder with BookingSeats so it's shown as unavailable
-                    fullSeats.Add(new Seat
+                    string seatNumber = $"S{i:D2}"; // S01, S02, ..., S40
+
+                    // Try to find this seat in the API response
+                    var seatFromApi = fetchedSeats.FirstOrDefault(s =>
+                        s.SeatNumber.Equals(seatNumber, StringComparison.OrdinalIgnoreCase));
+
+                    if (seatFromApi != null)
                     {
-                        Id = -i, // temporary negative ID to avoid collision
-                        SeatNumber = seatNumber,
-                        BookingSeats = new List<BookingSeat> { new BookingSeat() }
-                    });
+                        // Seat is available
+                        fullSeats.Add(seatFromApi);
+                    }
+                    else
+                    {
+                        // Seat is occupied → placeholder with BookingSeats so it's shown as unavailable
+                        fullSeats.Add(new Seat
+                        {
+                            Id = -i, // temporary negative ID to avoid collision
+                            SeatNumber = seatNumber,
+                            BookingSeats = new List<BookingSeat> { new BookingSeat() }
+                        });
+                    }
                 }
-            }
 
-            availableSeats = fullSeats;
+                availableSeats = fullSeats;
+            }
+            else
+            {
+                ShowModal("Loading Error", $"Failed to load available seats. Status: {response.StatusCode}", "error");
+                availableSeats = new List<Seat>();
+            }
         }
-        else
+        catch (Exception ex)
         {
-            errorMessage = $"Failed to load available seats. Status: {response.StatusCode}";
+            ShowModal("Connection Error", $"Error loading available seats: {ex.Message}", "error");
             availableSeats = new List<Seat>();
         }
+        finally
+        {
+            isLoadingSeats = false;
+        }
     }
-    catch (Exception ex)
-    {
-        errorMessage = $"Error loading available seats: {ex.Message}";
-        availableSeats = new List<Seat>();
-    }
-    finally
-    {
-        isLoadingSeats = false;
-    }
-}
-
-
 
     private void ToggleSeat(Seat? seat)
-{
-    if (seat == null || (seat.BookingSeats?.Any() == true)) // occupied
-        return;
+    {
+        if (seat == null || (seat.BookingSeats?.Any() == true)) // occupied
+            return;
 
-    if (selectedSeatIds.Contains(seat.Id))
-        selectedSeatIds.Remove(seat.Id);
-    else
-        selectedSeatIds.Add(seat.Id);
+        if (selectedSeatIds.Contains(seat.Id))
+            selectedSeatIds.Remove(seat.Id);
+        else
+            selectedSeatIds.Add(seat.Id);
 
-    StateHasChanged();
-}
-
+        StateHasChanged();
+    }
 
     private Seat? GetSeatInfo(string seatCode)
     {
@@ -548,15 +580,81 @@ private async Task LoadAvailableSeats()
     {
         if (!selectedSeatIds.Any())
         {
-            errorMessage = "Please select at least one seat.";
+            ShowModal("No Seats Selected", "Please select at least one seat before proceeding with the booking.", "warning");
             return;
         }
 
         try
         {
             isBooking = true;
-            errorMessage = "";
 
+            // First, re-check seat availability
+            var availabilityResponse = await Http.GetAsync($"/api/v1/Booking/AvailableSeats/{ShowId}");
+            
+            if (!availabilityResponse.IsSuccessStatusCode)
+            {
+                ShowModal("Connection Error", "Failed to verify seat availability. Please check your connection and try again.", "error");
+                return;
+            }
+
+            var availabilityJson = await availabilityResponse.Content.ReadAsStringAsync();
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            var currentlyAvailableSeats = JsonSerializer.Deserialize<List<Seat>>(availabilityJson, options) ?? new List<Seat>();
+            
+            // Get the IDs of currently available seats
+            var currentlyAvailableSeatIds = currentlyAvailableSeats.Select(s => s.Id).ToHashSet();
+            
+            // Check if any of the selected seats are no longer available
+            var unavailableSeats = selectedSeatIds.Where(id => !currentlyAvailableSeatIds.Contains(id)).ToList();
+            
+            if (unavailableSeats.Any())
+            {
+                // Get seat numbers for the unavailable seats
+                var unavailableSeatNumbers = new List<string>();
+                foreach (var unavailableSeatId in unavailableSeats)
+                {
+                    var seat = availableSeats?.FirstOrDefault(s => s.Id == unavailableSeatId);
+                    if (seat != null)
+                    {
+                        unavailableSeatNumbers.Add(seat.SeatNumber);
+                    }
+                }
+                
+                // Remove unavailable seats from selection
+                foreach (var unavailableSeatId in unavailableSeats)
+                {
+                    selectedSeatIds.Remove(unavailableSeatId);
+                }
+                
+                // Show modal notification
+                var seatList = string.Join(", ", unavailableSeatNumbers);
+                var seatWord = unavailableSeats.Count == 1 ? "seat" : "seats";
+                var hasHave = unavailableSeats.Count == 1 ? "has" : "have";
+                var isAre = unavailableSeats.Count == 1 ? "is" : "are";
+                
+                var modalMessage = $"Sorry, the following {seatWord} {seatList} {isAre} no longer available and {hasHave} been removed from your selection.";
+                
+                if (selectedSeatIds.Any())
+                {
+                    modalMessage += " You can proceed with your remaining selection or choose different seats.";
+                }
+                else
+                {
+                    modalMessage += " Please select new seats to continue.";
+                }
+                
+                ShowModal("Seats No Longer Available", modalMessage, "warning");
+                
+                // Refresh the seat map to show current availability
+                await LoadAvailableSeats();
+                StateHasChanged();
+                return;
+            }
+
+            // If we reach here, all selected seats are still available
             var bookingRequest = new BookingRequest
             {
                 UserId = 1, // You'll need to get the actual user ID from authentication
@@ -571,28 +669,84 @@ private async Task LoadAvailableSeats()
 
             if (response.IsSuccessStatusCode)
             {
-                // Navigate to confirmation page or show success message
+                // Show success modal before navigation
+                ShowModal("Booking Confirmed!", "Your tickets have been successfully booked. Redirecting to confirmation page...", "success", true);
+                
+                // Small delay to let user see the success message
+                await Task.Delay(2000);
                 Navigation.NavigateTo($"/booking-confirmation?showId={ShowId}&seats={string.Join(",", selectedSeatIds)}&total={show!.Price * selectedSeatIds.Count}");
             }
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                errorMessage = $"Booking failed: {errorContent}";
+                
+                // Check if the error is related to seat availability (common booking conflict scenario)
+                if (errorContent.ToLower().Contains("seat") && (errorContent.ToLower().Contains("unavailable") || errorContent.ToLower().Contains("occupied") || errorContent.ToLower().Contains("booked")))
+                {
+                    ShowModal("Booking Conflict", "One or more selected seats have been booked by another user. The seat map has been refreshed. Please select different seats.", "error");
+                    // Refresh the seat map
+                    await LoadAvailableSeats();
+                    selectedSeatIds.Clear();
+                }
+                else
+                {
+                    ShowModal("Booking Failed", $"Unable to complete your booking: {errorContent}", "error");
+                }
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error processing booking: {ex.Message}";
+            ShowModal("Unexpected Error", $"An error occurred while processing your booking: {ex.Message}", "error");
         }
         finally
         {
             isBooking = false;
+            StateHasChanged();
         }
     }
 
     private void GoBack()
     {
         Navigation.NavigateTo("/shows");
+    }
+
+    // Modal methods
+    private void ShowModal(string title, string message, string type = "info", bool redirecting = false)
+    {
+        modalTitle = title;
+        modalMessage = message;
+        modalType = type;
+        isRedirecting = redirecting;
+        showModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        StateHasChanged();
+    }
+
+    private string GetModalIconClass()
+    {
+        return modalType switch
+        {
+            "success" => "bi-check-circle-fill text-success",
+            "warning" => "bi-exclamation-triangle-fill text-warning",
+            "error" => "bi-x-circle-fill text-danger",
+            _ => "bi-info-circle-fill text-info"
+        };
+    }
+
+    private string GetModalHeaderClass()
+    {
+        return modalType switch
+        {
+            "success" => "bg-success text-white",
+            "warning" => "bg-warning text-dark",
+            "error" => "bg-danger text-white",
+            _ => "bg-info text-white"
+        };
     }
 
     // Data models
