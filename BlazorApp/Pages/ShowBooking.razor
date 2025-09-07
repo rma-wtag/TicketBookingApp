@@ -2,8 +2,10 @@
 @using System.Text.Json
 @using Microsoft.AspNetCore.Components.Authorization
 @using BlazorApp.Services
+@using System.Security.Claims
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <div class="container mt-4">
     @if (isLoading)
@@ -44,7 +46,7 @@
                                          alt="@show.Movie.Title poster"
                                          class="img-fluid rounded shadow"
                                          style="width: 100%; max-width: 300px; object-fit: cover;"
-                                         onerror="this.src='https://via.placeholder.com/300x450/6c757d/ffffff?text=No+Image'">
+                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/60x80/6c757d/ffffff?text=No+Image';">
                                 }
                                 else
                                 {
@@ -635,9 +637,32 @@
             }
 
             // STEP 2: Proceed with booking
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (!user.Identity!.IsAuthenticated)
+            {
+                ShowModal("Not Logged In", "Please log in to complete your booking.", "warning");
+                return;
+            }
+
+            // Try to get the `sub` claim (or your custom claim like "userId")
+            var userIdClaim = user.FindFirst(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub");
+
+            if (userIdClaim == null)
+            {
+                ShowModal("User Error", "Unable to retrieve user information from token.", "error");
+                return;
+            }
+
+            int userId = int.Parse(userIdClaim.Value);
+
+            Console.WriteLine("The UserId is : " , userId);
+
             var bookingRequest = new BookingRequest
         {
-            UserId = 1, // Replace with logged-in user
+            UserId = userId, // Replace with logged-in user
             ShowId = ShowId,
             SelectedSeatIds = selectedSeatIds.ToList()
         };
@@ -687,7 +712,7 @@
             var paymentJson = JsonSerializer.Serialize(paymentSessionRequest);
             var paymentContent = new StringContent(paymentJson, System.Text.Encoding.UTF8, "application/json");
 
-            var paymentResponse = await Http.PostAsync("/api/v1/Payment/session", paymentContent);
+            var paymentResponse = await Http.PostAsync("/api/v1/PaymentGateway/session", paymentContent);
 
             if (!paymentResponse.IsSuccessStatusCode)
             {

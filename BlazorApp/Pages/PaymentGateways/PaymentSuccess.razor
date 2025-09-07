@@ -1,9 +1,9 @@
-﻿@page "/payment/success"
+﻿@page "/PaymentGateway/success"
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @using Microsoft.JSInterop
 
-<h3>Payment Success</h3>
+<h3 class="mb-4">Payment Success</h3>
 
 @if (loading)
 {
@@ -11,7 +11,7 @@
 }
 else if (!string.IsNullOrEmpty(bookingId))
 {
-    <div class="alert alert-success">
+    <div class="w-25 alert alert-success mt-4">
         <strong>Payment Successful!</strong> 🎉<br /><br />
         Booking ID: @bookingId <br /><br />
 

@@ -1,0 +1,483 @@
+﻿@page "/admin/payments"
+@using System.ComponentModel.DataAnnotations
+@using System.Text.Json
+@using Microsoft.AspNetCore.Components.Forms
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<h1>Payments Management</h1>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex gap-2">
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-filter"></i> Filter by Status
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" @onclick="() => FilterByStatus(null)">All Payments</a></li>
+                    <li><a class="dropdown-item" href="#" @onclick="() => FilterByStatus(0)">Pending</a></li>
+                    <li><a class="dropdown-item" href="#" @onclick="() => FilterByStatus(1)">Completed</a></li>
+                    <li><a class="dropdown-item" href="#" @onclick="() => FilterByStatus(2)">Failed</a></li>
+                    <li><a class="dropdown-item" href="#" @onclick="() => FilterByStatus(3)">Refunded</a></li>
+                </ul>
+            </div>
+            <button class="btn btn-outline-info" @onclick="LoadPayments">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="badge bg-primary rounded-pill fs-6">
+                Total: $@filteredPayments.Sum(p => p.Amount).ToString("F2")
+            </span>
+            <span class="badge bg-success rounded-pill fs-6">
+                @filteredPayments.Count(p => p.PaymentStatus == 1) Completed
+            </span>
+        </div>
+    </div>
+
+    @if (loading)
+    {
+        <div class="d-flex justify-content-center py-5">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0">Payment ID</th>
+                                <th class="border-0">Status</th>
+                                <th class="border-0">Amount</th>
+                                <th class="border-0">Movie & Show</th>
+                                <th class="border-0">Booking Details</th>
+                                <th class="border-0">Payment Date</th>
+                                <th class="border-0 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (filteredPayments.Any())
+                            {
+                                @foreach (var payment in filteredPayments)
+                                {
+                                    <tr class="@GetRowClass(payment.PaymentStatus)">
+                                        <td class="align-middle">
+                                            <span class="fw-semibold">#@payment.Id</span>
+                                        </td>
+                                        <td class="align-middle">
+                                            <span class="badge @GetStatusBadgeClass(payment.PaymentStatus) rounded-pill">
+                                                @GetStatusText(payment.PaymentStatus)
+                                            </span>
+                                        </td>
+                                        <td class="align-middle">
+                                            <div class="fw-bold text-success fs-5">$@payment.Amount.ToString("F2")</div>
+                                        </td>
+                                        <td class="align-middle">
+                                            <div>
+                                                @if (payment.Booking?.Show != null)
+                                                {
+                                                    <div class="fw-semibold">Show #@payment.Booking.Show.Id</div>
+                                                    <small class="text-muted">
+                                                        @payment.Booking.Show.StartTime.ToString("MMM dd, yyyy")
+                                                    </small><br>
+                                                    <small class="text-muted">
+                                                        @payment.Booking.Show.StartTime.ToString("hh:mm tt") - @payment.Booking.Show.EndTime.ToString("hh:mm tt")
+                                                    </small><br>
+                                                    <div class="d-flex align-items-center mt-1">
+                                                        <span class="badge bg-info rounded-pill me-2">
+                                                            @(payment.Booking.Show.Hall?.Name ?? $"Hall {payment.Booking.Show.HallId}")
+                                                        </span>
+                                                        <span class="badge bg-success rounded-pill">
+                                                            $@payment.Booking.Show.Price.ToString("F2")
+                                                        </span>
+                                                    </div>
+                                                    @if (payment.Booking.Show.Movie != null)
+                                                    {
+                                                        <small class="text-muted d-block mt-1">
+                                                            Movie: @payment.Booking.Show.Movie.Title
+                                                        </small>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Show details not available</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="align-middle">
+                                            <div>
+                                                <div class="fw-semibold">Booking #@payment.BookingId</div>
+                                                @if (payment.Booking != null)
+                                                {
+                                                    <small class="text-muted">User ID: @payment.Booking.UserId</small><br>
+                                                    <small class="text-muted">
+                                                        Created: @payment.Booking.CreatedAt.ToString("MMM dd, yyyy")
+                                                    </small><br>
+                                                    <span class="badge @(payment.Booking.IsCompleted ? "bg-success" : "bg-warning") rounded-pill">
+                                                        @(payment.Booking.IsCompleted ? "Completed" : "Pending")
+                                                    </span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="align-middle">
+                                            <div>@payment.DateTime.ToString("MMM dd, yyyy")</div>
+                                            <small class="text-muted">@payment.DateTime.ToString("hh:mm tt")</small>
+                                        </td>
+                                        <td class="align-middle text-center">
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-outline-info" @onclick="() => ShowPaymentDetails(payment)">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="7" class="text-center py-5 text-muted">
+                                        <i class="fas fa-credit-card fa-2x mb-3 d-block"></i>
+                                        @(selectedStatus.HasValue ? $"No {GetStatusText(selectedStatus.Value).ToLower()} payments found." : "No payments found.")
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Statistics Cards -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-primary">Total Revenue</h5>
+                        <h3 class="text-success">${@payments.Where(p => p.PaymentStatus == 1).Sum(p => p.Amount).ToString("F2")}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-warning">Pending</h5>
+                        <h3>${@payments.Where(p => p.PaymentStatus == 0).Sum(p => p.Amount).ToString("F2")}</h3>
+                        <small class="text-muted">@payments.Count(p => p.PaymentStatus == 0) payments</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-danger">Failed</h5>
+                        <h3>${@payments.Where(p => p.PaymentStatus == 2).Sum(p => p.Amount).ToString("F2")}</h3>
+                        <small class="text-muted">@payments.Count(p => p.PaymentStatus == 2) payments</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-info">Refunded</h5>
+                        <h3>${@payments.Where(p => p.PaymentStatus == 3).Sum(p => p.Amount).ToString("F2")}</h3>
+                        <small class="text-muted">@payments.Count(p => p.PaymentStatus == 3) payments</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Payment Details Modal -->
+<div class="modal fade @(showDetailsModal ? "show d-block" : "")" tabindex="-1" style="@(showDetailsModal ? "background-color: rgba(0,0,0,0.5);" : "")">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title">Payment Details</h5>
+                <button type="button" class="btn-close" @onclick="CloseDetailsModal"></button>
+            </div>
+            <div class="modal-body">
+                @if (selectedPayment != null)
+                {
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Payment Information</h6>
+                                    <p><strong>Payment ID:</strong> #@selectedPayment.Id</p>
+                                    <p><strong>Amount:</strong> <span class="text-success fw-bold">$@selectedPayment.Amount.ToString("F2")</span></p>
+                                    <p><strong>Status:</strong> 
+                                        <span class="badge @GetStatusBadgeClass(selectedPayment.PaymentStatus) rounded-pill">
+                                            @GetStatusText(selectedPayment.PaymentStatus)
+                                        </span>
+                                    </p>
+                                    <p><strong>Date:</strong> @selectedPayment.DateTime.ToString("MMM dd, yyyy hh:mm tt")</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Booking Information</h6>
+                                    @if (selectedPayment.Booking != null)
+                                    {
+                                        <p><strong>Booking ID:</strong> #@selectedPayment.Booking.Id</p>
+                                        <p><strong>User ID:</strong> @selectedPayment.Booking.UserId</p>
+                                        <p><strong>Created:</strong> @selectedPayment.Booking.CreatedAt.ToString("MMM dd, yyyy hh:mm tt")</p>
+                                        <p><strong>Status:</strong> 
+                                            <span class="badge @(selectedPayment.Booking.IsCompleted ? "bg-success" : "bg-warning") rounded-pill">
+                                                @(selectedPayment.Booking.IsCompleted ? "Completed" : "Pending")
+                                            </span>
+                                        </p>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        @if (selectedPayment.Booking?.Show != null)
+                        {
+                            <div class="col-12">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Show Information</h6>
+                                        <div class="d-flex align-items-center">
+                                            @if (!string.IsNullOrEmpty(selectedPayment.Booking.Show.Movie?.PosterUrl))
+                                            {
+                                                <img src="@selectedPayment.Booking.Show.Movie.PosterUrl" alt="@selectedPayment.Booking.Show.Movie.Title" class="rounded me-3" style="width: 60px; height: 90px; object-fit: cover;" />
+                                            }
+                                            <div>
+                                                <h6 class="mb-1">@(selectedPayment.Booking.Show.Movie?.Title ?? "N/A")</h6>
+                                                @if (selectedPayment.Booking.Show.Movie != null)
+                                                {
+                                                    <p class="mb-1"><small class="text-muted">Rating: ★ @selectedPayment.Booking.Show.Movie.Rating.ToString("F1")</small></p>
+                                                    <p class="mb-1"><small class="text-muted">Duration: @FormatDuration(selectedPayment.Booking.Show.Movie.Duration)</small></p>
+                                                }
+                                                <p class="mb-1"><strong>Show Time:</strong> @selectedPayment.Booking.Show.StartTime.ToString("MMM dd, yyyy hh:mm tt")</p>
+                                                <p class="mb-0"><strong>Hall:</strong> @(selectedPayment.Booking.Show.Hall?.Name ?? $"Hall {selectedPayment.Booking.Show.HallId}")</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Payment> payments = new();
+    private List<Payment> filteredPayments = new();
+    private bool loading = true;
+    private bool updating = false;
+    private bool showDetailsModal = false;
+    private Payment? selectedPayment;
+    private int? selectedStatus = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPayments();
+    }
+
+    private async Task LoadPayments()
+    {
+        try
+        {
+            loading = true;
+            var response = await Http.GetAsync("api/v1/Payment");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                payments = JsonSerializer.Deserialize<List<Payment>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                }) ?? new List<Payment>();
+
+                // Sort by payment date (most recent first)
+                payments = payments.OrderByDescending(p => p.DateTime).ToList();
+                FilterPayments();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error loading payments: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void FilterByStatus(int? status)
+    {
+        selectedStatus = status;
+        FilterPayments();
+    }
+
+    private void FilterPayments()
+    {
+        if (selectedStatus.HasValue)
+        {
+            filteredPayments = payments.Where(p => p.PaymentStatus == selectedStatus.Value).ToList();
+        }
+        else
+        {
+            filteredPayments = payments.ToList();
+        }
+    }
+
+    private async Task UpdatePaymentStatus(int paymentId, int newStatus)
+    {
+        if (updating) return;
+
+        try
+        {
+            updating = true;
+            var updateData = new { PaymentStatus = newStatus };
+            var response = await Http.PutAsJsonAsync($"api/v1/Payment/{paymentId}", updateData);
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadPayments();
+                await JSRuntime.InvokeVoidAsync("alert", $"Payment status updated to {GetStatusText(newStatus)}!");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Error updating payment status: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error updating payment: {ex.Message}");
+        }
+        finally
+        {
+            updating = false;
+        }
+    }
+
+    private void ShowPaymentDetails(Payment payment)
+    {
+        selectedPayment = payment;
+        showDetailsModal = true;
+    }
+
+    private void CloseDetailsModal()
+    {
+        showDetailsModal = false;
+        selectedPayment = null;
+    }
+
+    private string GetStatusText(int status)
+    {
+        return status switch
+        {
+            0 => "Pending",
+            1 => "Processing",
+            2 => "Success",
+            3 => "Failed",
+            _ => "Unknown"
+        };
+    }
+
+    private string GetStatusBadgeClass(int status)
+    {
+        return status switch
+        {
+            0 => "bg-warning",
+            1 => "bg-info", 
+            2 => "bg-success",
+            3 => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetRowClass(int status)
+    {
+        return status switch
+        {
+            1 => "table-danger", // Failed payments
+            _ => ""
+        };
+    }
+
+    private string FormatDuration(TimeSpan duration)
+    {
+        return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+    }
+
+    public class Payment
+    {
+        public int Id { get; set; }
+        public int PaymentStatus { get; set; }
+        public decimal Amount { get; set; }
+        public DateTime DateTime { get; set; }
+        public int BookingId { get; set; }
+        public Booking? Booking { get; set; }
+    }
+
+    public class Booking
+    {
+        public int Id { get; set; }
+        public int UserId { get; set; }
+        public User? User { get; set; }
+        public int ShowId { get; set; }
+        public Show? Show { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public bool IsCompleted { get; set; }
+        public List<BookingSeat> BookingSeats { get; set; } = new();
+    }
+
+    public class Show
+    {
+        public int Id { get; set; }
+        public int MovieId { get; set; }
+        public Movie? Movie { get; set; }
+        public int HallId { get; set; }
+        public Hall? Hall { get; set; }
+        public decimal Price { get; set; }
+        public List<Booking> Bookings { get; set; } = new();
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+    }
+
+    public class Movie
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string? Description { get; set; }
+        public decimal Rating { get; set; }
+        public TimeSpan Duration { get; set; }
+        public string? PosterUrl { get; set; }
+        public List<Show> Shows { get; set; } = new();
+    }
+
+    public class Hall
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public int Capacity { get; set; }
+    }
+
+    public class User
+    {
+        public int Id { get; set; }
+        public string? Name { get; set; }
+        public string? Email { get; set; }
+    }
+
+    public class BookingSeat
+    {
+        public int Id { get; set; }
+        public int BookingId { get; set; }
+        public int SeatId { get; set; }
+    }
+}

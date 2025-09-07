@@ -10,6 +10,7 @@ namespace TicketBookingApp.Repositories
         public MovieRepository MovieRepository { get; set; }
         public HallRepository HallRepository { get; set; }
         public ShowRepository ShowRepository { get; set; }
+        public PaymentRepository PaymentRepository { get; set; }
 
         public UnitOfWork(ApplicationDbContext context)
         {
@@ -17,6 +18,7 @@ namespace TicketBookingApp.Repositories
             MovieRepository = new MovieRepository(context);
             HallRepository = new HallRepository(context);
             ShowRepository = new ShowRepository(context);
+            PaymentRepository = new PaymentRepository(context);
             _transaction = _context.Database.BeginTransaction();
         }
         public async Task CommitAsync()
