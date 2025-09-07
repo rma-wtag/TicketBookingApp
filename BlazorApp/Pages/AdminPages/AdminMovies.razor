@@ -151,8 +151,29 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label">Poster URL</label>
-                            <InputText @bind-Value="movieForm.PosterUrl" class="form-control" placeholder="https://example.com/poster.jpg" />
+                            <label class="form-label">Poster</label>
+                            <div class="input-group">
+                                <InputText @bind-Value="movieForm.PosterUrl" class="form-control" placeholder="https://example.com/poster.jpg" />
+                                <button type="button" class="btn btn-outline-secondary" @onclick="ShowPosterUpload" disabled="@uploadingPoster">
+                                    @if (uploadingPoster)
+                                    {
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-upload"></i>
+                                    }
+                                </button>
+                            </div>
+                            <div class="form-text">Enter poster URL or upload an image file</div>
+                            
+                            @* Poster preview *@
+                            @if (!string.IsNullOrEmpty(movieForm.PosterUrl))
+                            {
+                                <div class="mt-2">
+                                    <img src="@movieForm.PosterUrl" alt="Poster preview" class="rounded" style="width: 100px; height: 150px; object-fit: cover;" />
+                                </div>
+                            }
                         </div>
 
                         <div class="col-12">
@@ -172,6 +193,45 @@
                         </button>
                     </div>
                 </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Poster Upload Modal -->
+<div class="modal fade @(showPosterUploadModal ? "show d-block" : "")" tabindex="-1" style="@(showPosterUploadModal ? "background-color: rgba(0,0,0,0.5);" : "")">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title">Upload Poster</h5>
+                <button type="button" class="btn-close" @onclick="ClosePosterUploadModal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Image File</label>
+                    <InputFile OnChange="HandlePosterFileSelected" class="form-control" accept="image/*" />
+                    <div class="form-text">
+                        Supported formats: JPG, PNG, GIF, WebP (Max size: 10MB)
+                    </div>
+                </div>
+
+                @if (selectedPosterFile != null)
+                {
+                    <div class="alert alert-info">
+                        <i class="fas fa-image"></i> Selected: @selectedPosterFile.Name (@FormatBytes(selectedPosterFile.Size))
+                    </div>
+                }
+
+                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="ClosePosterUploadModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="UploadPoster" disabled="@(selectedPosterFile == null || uploadingPoster)">
+                        @if (uploadingPoster)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Upload Poster
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -249,16 +309,19 @@
     private bool saving = false;
     private bool deleting = false;
     private bool uploading = false;
+    private bool uploadingPoster = false;
 
     private bool showMovieModal = false;
     private bool showUploadModal = false;
     private bool showDeleteModal = false;
+    private bool showPosterUploadModal = false;
     private bool isEditing = false;
 
     private MovieForm movieForm = new();
     private string durationString = "";
     private Movie? movieToDelete;
     private IBrowserFile? selectedFile;
+    private IBrowserFile? selectedPosterFile;
 
     protected override async Task OnInitializedAsync()
     {
@@ -346,7 +409,8 @@
                 {
                     Description = movieForm.Description,
                     Rating = movieForm.Rating,
-                    Duration = movieForm.Duration.ToString()
+                    Duration = movieForm.Duration.ToString(),
+                    PosterUrl = movieForm.PosterUrl
                 };
                 response = await Http.PutAsJsonAsync($"api/v1/Movie/{movieForm.Id}", updateData);
             }
@@ -476,6 +540,90 @@
         finally
         {
             uploading = false;
+        }
+    }
+
+    // Poster upload methods
+    private void ShowPosterUpload()
+    {
+        selectedPosterFile = null;
+        showPosterUploadModal = true;
+    }
+
+    private void ClosePosterUploadModal()
+    {
+        showPosterUploadModal = false;
+        selectedPosterFile = null;
+    }
+
+    private void HandlePosterFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedPosterFile = e.File;
+    }
+
+    private async Task UploadPoster()
+    {
+        if (selectedPosterFile == null) return;
+
+        try
+        {
+            uploadingPoster = true;
+
+            // Validate file size (10MB max)
+            const long maxFileSize = 10 * 1024 * 1024;
+            if (selectedPosterFile.Size > maxFileSize)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "File size too large. Maximum allowed size is 10MB.");
+                return;
+            }
+
+            // Validate file type
+            var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+            if (!allowedTypes.Contains(selectedPosterFile.ContentType.ToLower()))
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Invalid file type. Please select a valid image file (JPG, PNG, GIF, WebP).");
+                return;
+            }
+
+            using var content = new MultipartFormDataContent();
+            using var fileContent = new StreamContent(selectedPosterFile.OpenReadStream(maxFileSize));
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(selectedPosterFile.ContentType);
+            content.Add(fileContent, "file", selectedPosterFile.Name);
+
+            var response = await Http.PostAsync("api/v1/Blob/upload", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Read response as plain text (URL string) instead of JSON
+                var uploadedUrl = await response.Content.ReadAsStringAsync();
+                
+                // Remove any quotes if the API returns quoted string
+                uploadedUrl = uploadedUrl.Trim('"');
+
+                if (!string.IsNullOrEmpty(uploadedUrl))
+                {
+                    movieForm.PosterUrl = uploadedUrl;
+                    ClosePosterUploadModal();
+                    await JSRuntime.InvokeVoidAsync("alert", "Poster uploaded successfully!");
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Error: Empty response from upload service.");
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                await JSRuntime.InvokeVoidAsync("alert", $"Error uploading poster: {response.ReasonPhrase}. {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error uploading poster: {ex.Message}");
+        }
+        finally
+        {
+            uploadingPoster = false;
         }
     }
 
