@@ -33,7 +33,6 @@ namespace TicketBookingApp.Helpers
                     MovieId = int.Parse(row.Cell(1).GetString()),
                     HallId = int.Parse(row.Cell(2).GetString()),
                     StartTime = DateTime.Parse(row.Cell(3).GetString()),
-                    EndTime = DateTime.Parse(row.Cell(4).GetString())
                 });
             }
 

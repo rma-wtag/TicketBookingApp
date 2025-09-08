@@ -46,7 +46,24 @@ namespace TicketBookingApp.Repositories
             return show;
         }
 
-        public async Task<Show> CreateNewShowAsync(Show show) {
+        public async Task<Show?> CreateNewShowAsync(Show show) {
+            var movie = await _context.Movies.FindAsync(show.MovieId);
+            if (movie == null) return null;
+
+            show.EndTime = show.StartTime + movie.Duration;
+
+            bool overlapExists = await _context.Shows
+                .AnyAsync(s => s.HallId == show.HallId &&
+                              (
+                                  (show.StartTime >= s.StartTime && show.StartTime < s.EndTime) ||
+                                  (show.EndTime > s.StartTime && show.EndTime <= s.EndTime) ||
+                                  (show.StartTime <= s.StartTime && show.EndTime >= s.EndTime)
+                              ));
+            if (overlapExists)
+            {
+                throw new InvalidOperationException("A show already exists in this hall during the selected time range.");
+            }
+
             await _context.Shows.AddAsync(show);
 
             return show;

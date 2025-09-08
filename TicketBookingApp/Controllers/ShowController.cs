@@ -42,14 +42,28 @@ namespace TicketBookingApp.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Show>> CreateShow([FromBody] CreateShowDto createShowDto) {
+        public async Task<ActionResult<Show>> CreateShow([FromBody] CreateShowDto createShowDto)
+        {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            var show = _mapper.Map<Show>(createShowDto);
-            var createdShow = await _uow.ShowRepository.CreateNewShowAsync(show);
-            await _uow.CommitAsync();
 
-            return CreatedAtAction(nameof(GetById), new { id = createdShow.Id }, createdShow);
+            var show = _mapper.Map<Show>(createShowDto);
+
+            try
+            {
+                var createdShow = await _uow.ShowRepository.CreateNewShowAsync(show);
+                await _uow.CommitAsync();
+
+                return CreatedAtAction(nameof(GetById), new { id = createdShow?.Id }, createdShow);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An unexpected error occurred.", details = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]

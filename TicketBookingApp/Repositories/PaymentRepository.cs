@@ -39,5 +39,18 @@ namespace TicketBookingApp.Repositories
             return payment;
         }
 
+        public async Task<IEnumerable<Payment>?> GetByUserId(int userId)
+        {
+            var payments = await _context.Payments
+                                .Include(p => p.Booking)
+                                .ThenInclude(b => b.Show)
+                                .ThenInclude(s => s!.Movie)
+                                .Where(x => x.Booking.UserId == userId)
+                                .OrderByDescending(p => p.Id)
+                                .ToListAsync();
+
+            return payments;
+        }
+
     }
 }

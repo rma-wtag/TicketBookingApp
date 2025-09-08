@@ -1,0 +1,295 @@
+﻿@page "/user/payments"
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Text.Json
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<h3 class="mb-4">My Payments</h3>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (payments == null || !payments.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No payments found.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Payment ID</th>
+                    <th>Movie</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Show Time</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var payment in payments)
+                {
+                    <tr>
+                        <td>@payment.Id</td>
+                        <td>
+                            @if (payment.Booking?.Show?.Movie != null)
+                            {
+                                <div>
+                                    <strong>@payment.Booking.Show.Movie.Title</strong>
+                                    <br />
+                                    <small class="text-muted">Booking #@payment.BookingId</small>
+                                </div>
+                            }
+                            else
+                            {
+                                <span>Booking #@payment.BookingId</span>
+                            }
+                        </td>
+                        <td>$@payment.Amount.ToString("F2")</td>
+                        <td>@payment.DateTime.ToString("MMM dd, yyyy HH:mm")</td>
+                        <td>
+                            @if (payment.Booking?.Show != null)
+                            {
+                                <span>@payment.Booking.Show.StartTime.ToString("MMM dd, HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge @GetStatusBadgeClass(payment.PaymentStatus)">
+                                @payment.PaymentStatus
+                            </span>
+                        </td>
+                        <td>
+                            @if (payment.PaymentStatus == PaymentStatus.Processing)
+                            {
+                                <button class="btn btn-danger btn-sm" 
+                                        @onclick="() => CompletePayment(payment.Id)"
+                                        disabled="@isProcessingPayment">
+                                    @if (isProcessingPayment && processingPaymentId == payment.Id)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                    }
+                                    Pay Now
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<Payment>? payments;
+    private bool isLoading = true;
+    private bool isProcessingPayment = false;
+    private int processingPaymentId = 0;
+
+    public class Payment
+    {
+        public int Id { get; set; }
+        public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Pending;
+        public decimal Amount { get; set; }
+        public DateTime DateTime { get; set; }
+        public int BookingId { get; set; }
+        public Booking? Booking { get; set; }
+    }
+
+    public class Booking
+    {
+        public int Id { get; set; }
+        public int UserId { get; set; }
+        public object? User { get; set; }
+        public int ShowId { get; set; }
+        public Show? Show { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public bool IsCompleted { get; set; }
+        public List<object>? BookingSeats { get; set; }
+    }
+
+    public class Show
+    {
+        public int Id { get; set; }
+        public int MovieId { get; set; }
+        public Movie? Movie { get; set; }
+        public int HallId { get; set; }
+        public object? Hall { get; set; }
+        public decimal Price { get; set; }
+        public List<object>? Bookings { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+    }
+
+    public class Movie
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public double Rating { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public TimeSpan Duration { get; set; }
+        public string PosterUrl { get; set; } = string.Empty;
+        public List<object>? Shows { get; set; }
+    }
+
+    public enum PaymentStatus
+    {
+        Pending,
+        Processing,
+        Success,
+        Failed,
+    }
+
+    public class PaymentSessionRequest
+    {
+        public int BookingId { get; set; }
+        public string CusName { get; set; } = string.Empty;
+        public string CusEmail { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+    }
+
+    public class PaymentSessionResponse
+    {
+        public string GatewayUrl { get; set; } = string.Empty;
+        public string SessionId { get; set; } = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPayments();
+    }
+
+    private async Task LoadPayments()
+    {
+        isLoading = true;
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            
+            if (!user.Identity!.IsAuthenticated)
+            {
+                await ShowModal("Not Logged In", "Please log in to view your payments.", "warning");
+                return;
+            }
+
+            var userIdClaim = user.FindFirst(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub");
+            if (userIdClaim == null)
+            {
+                await ShowModal("User Error", "Unable to retrieve user information from token.", "error");
+                return;
+            }
+
+            int userId = int.Parse(userIdClaim.Value);
+            payments = await Http.GetFromJsonAsync<List<Payment>>($"/api/v1/Payment/user/{userId}");
+        }
+        catch (Exception ex)
+        {
+            await ShowModal("Error", $"Failed to load payments: {ex.Message}", "error");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task CompletePayment(int paymentId)
+    {
+        isProcessingPayment = true;
+        processingPaymentId = paymentId;
+        
+        try
+        {
+            // Find the payment to get booking information
+            var payment = payments?.FirstOrDefault(p => p.Id == paymentId);
+            if (payment?.Booking == null)
+            {
+                await ShowModal("Error", "Payment or booking information not found.", "error");
+                return;
+            }
+
+            // STEP 4: Create Payment Session
+            var paymentSessionRequest = new PaymentSessionRequest
+            {
+                BookingId = payment.BookingId,
+                CusName = "Demo Customer",           // TODO: Replace with actual user name
+                CusEmail = "demo@example.com",       // TODO: Replace with actual user email
+                Amount = payment.Amount
+            };
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+
+            var paymentJson = JsonSerializer.Serialize(paymentSessionRequest, options);
+            var paymentContent = new StringContent(paymentJson, System.Text.Encoding.UTF8, "application/json");
+            var paymentResponse = await Http.PostAsync("/api/v1/PaymentGateway/session", paymentContent);
+            
+            if (!paymentResponse.IsSuccessStatusCode)
+            {
+                await ShowModal("Payment Error", "Failed to initiate payment session. Please try again.", "error");
+                return;
+            }
+
+            var paymentResponseJson = await paymentResponse.Content.ReadAsStringAsync();
+            var paymentResult = JsonSerializer.Deserialize<PaymentSessionResponse>(paymentResponseJson, options);
+            
+            if (string.IsNullOrEmpty(paymentResult?.GatewayUrl))
+            {
+                await ShowModal("Payment Error", "Invalid payment gateway response.", "error");
+                return;
+            }
+
+            // STEP 5: Redirect user to payment gateway
+            Navigation.NavigateTo(paymentResult.GatewayUrl, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            await ShowModal("Error", $"An error occurred: {ex.Message}", "error");
+        }
+        finally
+        {
+            isProcessingPayment = false;
+            processingPaymentId = 0;
+        }
+    }
+
+    private string GetStatusBadgeClass(PaymentStatus status)
+    {
+        return status switch
+        {
+            PaymentStatus.Pending => "bg-warning text-dark",
+            PaymentStatus.Processing => "bg-info",
+            PaymentStatus.Success => "bg-success",
+            PaymentStatus.Failed => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private async Task ShowModal(string title, string message, string type)
+    {
+        // You can replace this with your actual modal implementation
+        await JSRuntime.InvokeVoidAsync("alert", $"{title}: {message}");
+    }
+}

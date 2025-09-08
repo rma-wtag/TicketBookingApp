@@ -22,7 +22,7 @@ namespace TicketBookingApp.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Task?>> GetById([FromRoute] int id) {
+        public async Task<ActionResult<Payment?>> GetById([FromRoute] int id) {
             var payment = await _uow.PaymentRepository.GetById(id);
 
             if (payment == null) {
@@ -30,6 +30,18 @@ namespace TicketBookingApp.Controllers
             }
 
             return Ok(payment);
+        }
+        [HttpGet("user/{userId}")]
+        public async Task<ActionResult<IEnumerable<Payment>?>> GetByUserId([FromRoute] int userId)
+        {
+            var payments = await _uow.PaymentRepository.GetByUserId(userId);
+
+            if (payments == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(payments);
         }
     }
 }

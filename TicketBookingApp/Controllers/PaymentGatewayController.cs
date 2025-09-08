@@ -22,27 +22,33 @@ namespace TicketBookingApp.Controllers
         [HttpPost("session")]
         public async Task<ActionResult<PaymentSessionResponse>> CreateSession([FromBody] PaymentSessionRequest req, CancellationToken ct)
         {
-            var payload = new Dictionary<string, string>
-        {
-            { "total_amount", req.Amount.ToString("0.0") },
-            { "currency", "BDT" },
-            { "tran_id", req.BookingId.ToString() },
+            var doesBookingExist = await _context.Bookings.FindAsync(req.BookingId);
 
-            { "success_url", "https://localhost:7064/api/v1/PaymentGateway/success" },
-            { "fail_url", "https://localhost:7064/api/v1/PaymentGateway/fail" },
-            { "cancel_url", "https://localhost:7064/api/v1/PaymentGateway/cancel" },
-            { "cus_name", req.CusName },
-            { "cus_email", req.CusEmail },
-            { "cus_add1", "Dhaka" },
-            { "cus_city", "Dhaka" },
-            { "cus_postcode", "1219" },
-            { "cus_country", "Bangladesh" },
-            { "cus_phone", "+880" },
-            { "shipping_method", "NO" },
-            { "product_name", "Test Product" },
-            { "product_category", "Service" },
-            { "product_profile", "general" }
-        };
+            if (doesBookingExist == null) {
+                return NotFound();
+            }
+
+            var payload = new Dictionary<string, string>
+            {
+                { "total_amount", req.Amount.ToString("0.0") },
+                { "currency", "BDT" },
+                { "tran_id", req.BookingId.ToString() },
+
+                { "success_url", "https://localhost:7064/api/v1/PaymentGateway/success" },
+                { "fail_url", "https://localhost:7064/api/v1/PaymentGateway/fail" },
+                { "cancel_url", "https://localhost:7064/api/v1/PaymentGateway/cancel" },
+                { "cus_name", req.CusName },
+                { "cus_email", req.CusEmail },
+                { "cus_add1", "Dhaka" },
+                { "cus_city", "Dhaka" },
+                { "cus_postcode", "1219" },
+                { "cus_country", "Bangladesh" },
+                { "cus_phone", "+880" },
+                { "shipping_method", "NO" },
+                { "product_name", "Test Product" },
+                { "product_category", "Service" },
+                { "product_profile", "general" }
+            };
 
             var url = await _ssl.CreateSessionAsync(payload, ct);
 

@@ -117,6 +117,18 @@
     </div>
 </div>
     }
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <button class="btn btn-outline-secondary" @onclick="PreviousPage" disabled="@(!CanGoPrevious)">
+            <i class="bi bi-arrow-left"></i> Previous
+        </button>
+
+        <span>Page @currentPage</span>
+
+        <button class="btn btn-outline-secondary" @onclick="NextPage" disabled="@(!CanGoNext)">
+            Next <i class="bi bi-arrow-right"></i>
+        </button>
+    </div>
 </div>
 
 <!-- Create/Edit Movie Modal -->
@@ -324,6 +336,12 @@
     private IBrowserFile? selectedFile;
     private IBrowserFile? selectedPosterFile;
 
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private bool CanGoPrevious => currentPage > 1;
+    private bool CanGoNext => movies.Count == pageSize;
+
+
     protected override async Task OnInitializedAsync()
     {
         await LoadMovies();
@@ -334,7 +352,7 @@
         try
         {
             loading = true;
-            var response = await Http.GetAsync("api/v1/Movie/GetAll");
+            var response = await Http.GetAsync($"api/v1/Movie/GetAll?pageNumber={currentPage}&pageSize={pageSize}");
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
@@ -654,6 +672,24 @@
             counter++;
         }
         return $"{number:n1} {suffixes[counter]}";
+    }
+
+    private async Task NextPage()
+    {
+        if (CanGoNext)
+        {
+            currentPage++;
+            await LoadMovies();
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (CanGoPrevious)
+        {
+            currentPage--;
+            await LoadMovies();
+        }
     }
 
     public class Movie
