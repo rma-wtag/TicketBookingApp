@@ -50,6 +50,16 @@ namespace TicketBookingApp.Controllers
             var movie = _mapper.Map<Movie>(createMovieDto);
             var createdMovie = await _uow.MovieRepository.CreateMovieAsync(movie);
             await _uow.CommitAsync();
+
+            if (createdMovie.Rating >= 8.0m) {
+                using var httpClient = new HttpClient();
+                var functionUrl = "http://localhost:7164/api/notifications/high-rated";
+                var json = System.Text.Json.JsonSerializer.Serialize(createdMovie);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                await httpClient.PostAsync(functionUrl, content);
+            }
+
             return CreatedAtAction(nameof(GetById), new { id = createdMovie.Id }, createdMovie);
         }
 

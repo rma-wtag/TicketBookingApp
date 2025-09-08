@@ -18,5 +18,6 @@ namespace TicketBookingApp.Models
         public ICollection<Role> Roles { get; set; } = new List<Role>();
         public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         public List<Booking> Bookings { get; set; } = new List<Booking>();
+        public List<String> Notifications { get; set; } = new List<string>();
     }
 }
