@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Caching.Distributed;
 using TicketBookingApp.Entities;
 
 namespace TicketBookingApp.Repositories
@@ -7,17 +8,19 @@ namespace TicketBookingApp.Repositories
     {
         private readonly ApplicationDbContext _context;
         private IDbContextTransaction _transaction;
+        private readonly IDistributedCache _cache;
         public MovieRepository MovieRepository { get; set; }
         public HallRepository HallRepository { get; set; }
         public ShowRepository ShowRepository { get; set; }
         public PaymentRepository PaymentRepository { get; set; }
 
-        public UnitOfWork(ApplicationDbContext context)
+        public UnitOfWork(ApplicationDbContext context, IDistributedCache cache)
         {
             _context = context;
-            MovieRepository = new MovieRepository(context);
-            HallRepository = new HallRepository(context);
-            ShowRepository = new ShowRepository(context);
+            _cache = cache;
+            MovieRepository = new MovieRepository(context,cache);
+            HallRepository = new HallRepository(context,cache);
+            ShowRepository = new ShowRepository(context, cache);
             PaymentRepository = new PaymentRepository(context);
             _transaction = _context.Database.BeginTransaction();
         }

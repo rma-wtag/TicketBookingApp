@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using TicketBookingApp.Entities;
@@ -13,11 +14,14 @@ public class HighRatedMovieNotification
 {
     private readonly ILogger<HighRatedMovieNotification> _logger;
     private readonly ApplicationDbContext _context;
+    private const string UserNotificationsCacheKey = "user:notifications:";
+    private readonly IDistributedCache _cache;
 
-    public HighRatedMovieNotification(ILogger<HighRatedMovieNotification> logger,ApplicationDbContext context)
+    public HighRatedMovieNotification(ILogger<HighRatedMovieNotification> logger,ApplicationDbContext context, IDistributedCache cache)
     {
         _logger = logger;
         _context = context;
+        _cache = cache;
     }
 
     [Function("HighRatedMovieNotification")]
@@ -32,6 +36,8 @@ public class HighRatedMovieNotification
         foreach (var user in users)
         {
             user.Notifications.Add($"🔥 New high-rated movie: {movie!.Title} ({movie.Rating}/10)");
+            var cacheKey = $"{UserNotificationsCacheKey}{user.Id}";
+            await _cache.RemoveAsync(cacheKey);
         }
 
         await _context.SaveChangesAsync();

@@ -27,7 +27,7 @@ namespace TicketBookingApp.Controllers
         [HttpGet("GetAll")]
         public async Task<ActionResult<IEnumerable<Movie>>> GetAll(string? search, int pageNumber = 1, int pageSize = 10)
         {
-            var movies = await _uow.MovieRepository.GetAllMovies(search,pageNumber,pageSize);
+            var movies = await _uow.MovieRepository.GetAllMoviesAsync(search,pageNumber,pageSize);
             return Ok(movies);
         }
 

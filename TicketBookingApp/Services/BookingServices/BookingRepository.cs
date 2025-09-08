@@ -1,41 +1,90 @@
 ﻿using iText.IO.Font.Constants;
 using iText.Kernel.Colors;
 using iText.Kernel.Font;
-using iText.Kernel.Pdf;
-using iText.Layout.Borders;
-using iText.Layout.Properties;
-using iText.Layout;
-using iText.Layout.Element;
 using iText.Kernel.Geom;
+using iText.Kernel.Pdf;
+using iText.Layout;
+using iText.Layout.Borders;
+using iText.Layout.Element;
+using iText.Layout.Properties;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using Newtonsoft.Json;
 using TicketBookingApp.Dtos.BookingDtos;
 using TicketBookingApp.Entities;
 using TicketBookingApp.Models;
-using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace TicketBookingApp.Services.BookingServices
 {
     public class BookingRepository : IBookingRepository
     {
         public readonly ApplicationDbContext _context;
+        private readonly IDistributedCache _cache;
+        private const string BookingAllCacheKey = "bookings:getall";
+        private const string BookingByIdCacheKey = "bookings:";
 
-        public BookingRepository(ApplicationDbContext context)
+        public BookingRepository(ApplicationDbContext context,IDistributedCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         public async Task<IEnumerable<Booking>> GetAllBookingAsync()
         {
-            return await _context.Bookings.Include(b => b.Payment)
-                                            .ToListAsync();
+            var cached = await _cache.GetStringAsync(BookingAllCacheKey);
+
+            if (!string.IsNullOrEmpty(cached))
+            {
+                return JsonConvert.DeserializeObject<IEnumerable<Booking>>(cached)!;
+            }
+
+            var bookings = await _context.Bookings
+                                 .Include(b => b.Payment)
+                                 .ToListAsync();
+
+            var cacheOptions = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+            };
+            var jsonSettings = new JsonSerializerSettings
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
+
+            await _cache.SetStringAsync(BookingAllCacheKey, JsonConvert.SerializeObject(bookings, jsonSettings), cacheOptions);
+
+            return bookings;
+
         }
 
         public async Task<Booking?> GetBookingByIdAsync(int id){
+
+            string cacheKey = $"{BookingByIdCacheKey}{id}";
+            var cached = await _cache.GetStringAsync(cacheKey);
+            if (!string.IsNullOrEmpty(cached))
+            {
+                return JsonConvert.DeserializeObject<Booking>(cached);
+            }
+
             var booking = await _context.Bookings.Include(b => b.Payment)
                                                  .FirstOrDefaultAsync(x => x.Id == id);
 
             if (booking == null) return null;
+            if (booking != null)
+            {
+                var cacheOptions = new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+                };
+                var jsonSettings = new JsonSerializerSettings
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                };
+
+                await _cache.SetStringAsync(cacheKey, JsonConvert.SerializeObject(booking, jsonSettings), cacheOptions);
+            }
             return booking;
         }
 
@@ -279,16 +328,11 @@ namespace TicketBookingApp.Services.BookingServices
 
         public async Task<IEnumerable<Seat>?> GetAvailableSeatsAsync(int showId)
         {
-            var hallId = await _context.Shows.Where(sh => sh.Id == showId)
-                                        .Select(sh => sh.HallId)
-                                        .FirstOrDefaultAsync();
-            if (hallId == 0) return null;
+            var seats = await _context.Seats
+                                .FromSqlRaw("EXEC GetAvailableSeats @ShowId = {0}", showId)
+                                .ToListAsync();
 
-            var availableSeats = await _context.Seats
-                                        .Where(s=> s.HallId == hallId &&  !_context.BookingSeats
-                                        .Any(bs => bs.SeatId == s.Id && bs.Booking!.ShowId == showId))
-                                        .ToListAsync();
-            return availableSeats;
+            return seats;
         }
 
         public async Task<Booking?> CreateNewBookingAsync(CreateBookingDtos createBookingDtos)
@@ -348,6 +392,8 @@ namespace TicketBookingApp.Services.BookingServices
                 await _context.SaveChangesAsync();
                 await tx.CommitAsync();
 
+                await InvalidateBookingCacheAsync(booking.Id);
+
                 return booking;
             }
             catch (DbUpdateException)
@@ -367,7 +413,20 @@ namespace TicketBookingApp.Services.BookingServices
 
             _context.Remove(booking);
             await _context.SaveChangesAsync();
+
+            await InvalidateBookingCacheAsync(id);
             return booking;
+        }
+
+        private async Task InvalidateBookingCacheAsync(int? bookingId = null)
+        {
+            await _cache.RemoveAsync(BookingAllCacheKey);
+
+            if (bookingId != null)
+            {
+                string bookingKey = $"{BookingByIdCacheKey}{bookingId}";
+                await _cache.RemoveAsync(bookingKey);
+            }
         }
     }
 }

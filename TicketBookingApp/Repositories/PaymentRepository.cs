@@ -1,4 +1,6 @@
-﻿using DocumentFormat.OpenXml.Wordprocessing;
+﻿using DocumentFormat.OpenXml.Bibliography;
+using DocumentFormat.OpenXml.Wordprocessing;
+using iText.Kernel.Geom;
 using Microsoft.EntityFrameworkCore;
 using TicketBookingApp.Entities;
 using TicketBookingApp.Models;
@@ -39,7 +41,7 @@ namespace TicketBookingApp.Repositories
             return payment;
         }
 
-        public async Task<IEnumerable<Payment>?> GetByUserId(int userId)
+        public async Task<IEnumerable<Payment>?> GetByUserId(int userId,int pageNumber,int pageSize)
         {
             var payments = await _context.Payments
                                 .Include(p => p.Booking)
@@ -47,6 +49,8 @@ namespace TicketBookingApp.Repositories
                                 .ThenInclude(s => s!.Movie)
                                 .Where(x => x.Booking.UserId == userId)
                                 .OrderByDescending(p => p.Id)
+                                .Skip((pageNumber - 1) * pageSize)
+                                .Take(pageSize)
                                 .ToListAsync();
 
             return payments;

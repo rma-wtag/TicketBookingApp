@@ -1,5 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using Newtonsoft.Json;
 using TicketBookingApp.Entities;
 using TicketBookingApp.Models;
 
@@ -8,46 +9,94 @@ namespace TicketBookingApp.Repositories
     public class HallRepository
     {
         private readonly ApplicationDbContext _context;
-        public HallRepository(ApplicationDbContext context)
+        private readonly IDistributedCache _cache;
+        private const string HallAllCacheKey = "halls:getall";
+        private const string HallByIdCacheKey = "halls:";
+
+        public HallRepository(ApplicationDbContext context, IDistributedCache cache)
         {
             _context = context;
+            _cache = cache;
         }
-
         public async Task<IEnumerable<Hall>> GetAllAsync()
         {
+            var cached = await _cache.GetStringAsync(HallAllCacheKey);
+            if (!string.IsNullOrEmpty(cached))
+            {
+                return JsonConvert.DeserializeObject<IEnumerable<Hall>>(cached)!;
+            }
+
             var hallInfo = await _context.Halls
-                                .Include(h => h.Seats)
-                                .ToListAsync();
+                                         .Include(h => h.Seats)
+                                         .ToListAsync();
+
+            var cacheOptions = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15)
+            };
+
+            var jsonSettings = new JsonSerializerSettings
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
+
+            await _cache.SetStringAsync(HallAllCacheKey, JsonConvert.SerializeObject(hallInfo, jsonSettings), cacheOptions);
+
             return hallInfo;
         }
+        public async Task<Hall?> GetHallByIdAsync(int id)
+        {
+            string cacheKey = $"{HallByIdCacheKey}{id}";
 
-        public async Task<Hall?> GetHallByIdAsync(int id) {
+            var cached = await _cache.GetStringAsync(cacheKey);
+            if (!string.IsNullOrEmpty(cached))
+            {
+                return JsonConvert.DeserializeObject<Hall>(cached);
+            }
+
             var hallInfo = await _context.Halls
-                                .Include(h => h.Seats)
-                                .FirstOrDefaultAsync(h => h.Id == id);
+                                         .Include(h => h.Seats)
+                                         .FirstOrDefaultAsync(h => h.Id == id);
+
+            if (hallInfo != null)
+            {
+                var cacheOptions = new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15)
+                };
+
+                var jsonSettings = new JsonSerializerSettings
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                };
+
+                await _cache.SetStringAsync(cacheKey, JsonConvert.SerializeObject(hallInfo, jsonSettings), cacheOptions);
+            }
+
             return hallInfo;
         }
         public async Task<Hall> CreateHallAsync(Hall hall)
         {
             await _context.Halls.AddAsync(hall);
+            await _context.SaveChangesAsync(); // Save to generate Hall.Id
 
-            // generate 40 seats for this hall
+            // Generate 40 seats for this hall
             var seats = new List<Seat>();
             for (int i = 1; i <= 40; i++)
             {
                 seats.Add(new Seat
                 {
                     SeatNumber = $"S{i:D2}",
-                    HallId = hall.Id,
-                    Hall = hall
+                    HallId = hall.Id
                 });
             }
 
             await _context.Seats.AddRangeAsync(seats);
+            await _context.SaveChangesAsync();
 
-            // attach seats to hall navigation property
             hall.Seats = seats;
 
+            await InvalidateCacheAsync();
             return hall;
         }
 
@@ -58,8 +107,11 @@ namespace TicketBookingApp.Repositories
                 return null;
 
             existingHall.Name = hall.Name;
-
             _context.Halls.Update(existingHall);
+
+            await _context.SaveChangesAsync();
+            await InvalidateCacheAsync(id);
+
             return existingHall;
         }
 
@@ -70,9 +122,21 @@ namespace TicketBookingApp.Repositories
                 return null;
 
             _context.Halls.Remove(existingHall);
+            await _context.SaveChangesAsync();
 
+            await InvalidateCacheAsync(id);
             return existingHall;
         }
-    }
 
+        private async Task InvalidateCacheAsync(int? hallId = null)
+        {
+            await _cache.RemoveAsync(HallAllCacheKey);
+
+            if (hallId != null)
+            {
+                string hallKey = $"{HallByIdCacheKey}{hallId}";
+                await _cache.RemoveAsync(hallKey);
+            }
+        }
+    }
 }

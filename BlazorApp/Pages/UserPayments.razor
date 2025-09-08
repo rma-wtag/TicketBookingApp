@@ -97,13 +97,30 @@ else
             </tbody>
         </table>
     </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <button class="btn btn-outline-secondary" @onclick="PreviousPage" disabled="@(!CanGoPrevious)">
+            <i class="bi bi-arrow-left"></i> Previous
+        </button>
+
+        <span>Page @currentPage</span>
+
+        <button class="btn btn-outline-secondary" @onclick="NextPage" disabled="@(!CanGoNext)">
+            Next <i class="bi bi-arrow-right"></i>
+        </button>
+    </div>
 }
+
 
 @code {
     private List<Payment>? payments;
     private bool isLoading = true;
     private bool isProcessingPayment = false;
     private int processingPaymentId = 0;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private bool CanGoPrevious => currentPage > 1;
+    private bool CanGoNext => payments!.Count == pageSize;
 
     public class Payment
     {
@@ -201,7 +218,7 @@ else
             }
 
             int userId = int.Parse(userIdClaim.Value);
-            payments = await Http.GetFromJsonAsync<List<Payment>>($"/api/v1/Payment/user/{userId}");
+            payments = await Http.GetFromJsonAsync<List<Payment>>($"/api/v1/Payment/user/{userId}?pageNumber={currentPage}&pageSize={pageSize}");
         }
         catch (Exception ex)
         {
@@ -291,5 +308,23 @@ else
     {
         // You can replace this with your actual modal implementation
         await JSRuntime.InvokeVoidAsync("alert", $"{title}: {message}");
+    }
+
+    private async Task NextPage()
+    {
+        if (CanGoNext)
+        {
+            currentPage++;
+            await LoadPayments();
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (CanGoPrevious)
+        {
+            currentPage--;
+            await LoadPayments();
+        }
     }
 }
