@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles = "Admin")]
 
 <h1>Shows Management</h1>
 

@@ -16,9 +16,21 @@ namespace TicketBookingApp.Repositories
         }
 
         // READ
-        public async Task<IEnumerable<Movie>> GetAllMovies()
+        public async Task<IEnumerable<Movie>> GetAllMovies(string? search, int pageNumber, int pageSize)
         {
-            return await _context.Movies.ToListAsync();
+            var query = _context.Movies.AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(m => m.Title.Contains(search));
+            }
+
+            query = query.OrderByDescending(m => m.CreatedDate);
+
+            return await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
         }
 
         public async Task<Movie?> GetMovieByIdAsync(int id)

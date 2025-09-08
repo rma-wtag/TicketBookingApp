@@ -11,12 +11,32 @@ namespace TicketBookingApp.Repositories
         {
             _context = context;
         }
-        public async Task<IEnumerable<Show>> GetAllAsync() {
-            return await _context.Shows
-                            .Include(s => s.Movie)
-                            .Include(s => s.Hall)
-                            .Include(s => s.Bookings)
-                            .ToListAsync();
+        public async Task<IEnumerable<Show>> GetAllAsync(DateTime? startTime,string? movieId, int pageNumber,int pageSize) {
+
+            var query = _context.Shows
+                                .Include(s => s.Movie)
+                                .Include(s => s.Hall)
+                                .Include(s => s.Bookings)
+                                .AsQueryable();
+
+            if (startTime.HasValue) {
+                query = query.Where(s => s.StartTime >= startTime.Value);
+            }
+
+            if (!string.IsNullOrEmpty(movieId))
+            {
+                var movieIdInt = int.Parse(movieId);
+                query = query.Where(s => s.MovieId == movieIdInt);
+            }
+
+            query = query
+                .Where(s => s.StartTime >= DateTime.Now)
+                .OrderBy(s => s.StartTime);
+
+            return await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
         }
         public async Task<Show?> GetByIdAsync(int id) {
             var show = await _context.Shows.Include(s => s.Movie)

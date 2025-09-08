@@ -22,9 +22,12 @@ namespace TicketBookingApp.Controllers
         }
 
         [HttpGet("GetAll")]
-        public async Task<ActionResult<IEnumerable<Show>>> GetAll()
+        public async Task<ActionResult<IEnumerable<Show>>> GetAll(DateTime? startTime, string? movieId, int pageNumber=1,int pageSize=10)
         {
-            var shows = await _uow.ShowRepository.GetAllAsync();
+            if (pageNumber <= 0 || pageSize <= 0)
+                return BadRequest("Page number and size must be greater than zero.");
+
+            var shows = await _uow.ShowRepository.GetAllAsync(startTime, movieId, pageNumber, pageSize);
             return Ok(shows);
         }
 

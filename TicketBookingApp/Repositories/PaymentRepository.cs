@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using DocumentFormat.OpenXml.Wordprocessing;
+using Microsoft.EntityFrameworkCore;
 using TicketBookingApp.Entities;
 using TicketBookingApp.Models;
 
@@ -13,12 +14,15 @@ namespace TicketBookingApp.Repositories
             _context = context;
         }
 
-        public async Task<IEnumerable<Payment>> GetAllPaymentsAsync() {
+        public async Task<IEnumerable<Payment>> GetAllPaymentsAsync(int pageNumber,int pageSize) {
             return await _context.Payments
-                                .Include(p => p.Booking)
-                                .ThenInclude(b => b.Show)
-                                .ThenInclude(s => s!.Movie)
-                                .ToListAsync();
+                         .Include(p => p.Booking)
+                             .ThenInclude(b => b.Show)
+                                 .ThenInclude(s => s!.Movie)
+                         .OrderByDescending(p => p.Id)
+                         .Skip((pageNumber - 1) * pageSize)
+                         .Take(pageSize)
+                         .ToListAsync();
         }
         public async Task<Payment?> GetById(int id)
         {

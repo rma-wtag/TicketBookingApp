@@ -3,7 +3,7 @@
 @using System.ComponentModel.DataAnnotations.Schema
 @inject HttpClient Http
 @inject NavigationManager Navigation
-@attribute [Authorize]
+@attribute [Authorize(Roles = "User, Admin")]
 
 <PageTitle>@(movie?.Title ?? "Movie Details")</PageTitle>
 
@@ -51,7 +51,7 @@
             <!-- Movie Poster -->
             <div class="col-lg-4 col-md-5 mb-4">
                 <div class="card shadow">
-                    @if (!string.IsNullOrEmpty(movie.PosterUrl))
+                    @if (!string.IsNullOrEmpty(movie!.PosterUrl))
                     {
                         <img src="@movie.PosterUrl" class="card-img-top" alt="@movie.Title" style="height: 600px; object-fit: cover;" />
                     }
@@ -102,8 +102,9 @@
                         }
                         <!-- Action Buttons -->
                         <div class="d-flex gap-2 flex-wrap">
-                            <button class="btn btn-primary btn-lg">
-                                <i class="bi bi-ticket-perforated me-2"></i>Book Tickets
+                            <button class="btn btn-primary btn-lg"
+                                    @onclick="GoToMovieShows">
+                                <i class="bi bi-ticket-perforated me-2"></i>Available Shows
                             </button>
                             <button class="btn btn-outline-danger">
                                 <i class="bi bi-heart me-2"></i>Add to Favorites
@@ -189,6 +190,14 @@
     private void GoBackToMovies()
     {
         Navigation.NavigateTo("/movies");
+    }
+
+    private void GoToMovieShows()
+    {
+        if (movie != null)
+        {
+            Navigation.NavigateTo($"/shows/{movie.Id}");
+        }
     }
 
     private string FormatDuration(TimeSpan duration)

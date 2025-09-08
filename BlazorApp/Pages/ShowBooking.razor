@@ -6,6 +6,7 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize(Roles = "User, Admin")]
 
 <div class="container mt-4">
     @if (isLoading)

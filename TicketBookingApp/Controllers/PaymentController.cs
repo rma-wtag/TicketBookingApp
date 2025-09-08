@@ -15,8 +15,8 @@ namespace TicketBookingApp.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Payment>>> GetAllPayments() {
-            var payments = await _uow.PaymentRepository.GetAllPaymentsAsync();
+        public async Task<ActionResult<IEnumerable<Payment>>> GetAllPayments(int pageNumber=1,int pageSize=10) {
+            var payments = await _uow.PaymentRepository.GetAllPaymentsAsync(pageNumber,pageSize);
 
             return Ok(payments);
         }

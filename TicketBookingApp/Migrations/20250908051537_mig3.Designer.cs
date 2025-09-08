@@ -12,8 +12,8 @@ using TicketBookingApp.Entities;
 namespace TicketBookingApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250907035313_mig1")]
-    partial class mig1
+    [Migration("20250908051537_mig3")]
+    partial class mig3
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -177,6 +177,9 @@ namespace TicketBookingApp.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
@@ -377,6 +380,10 @@ namespace TicketBookingApp.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.PrimitiveCollection<string>("Notifications")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

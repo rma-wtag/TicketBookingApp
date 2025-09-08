@@ -14,6 +14,7 @@ namespace TicketBookingApp.Models
         [Range(0, 10.0,ErrorMessage = "Rating should be between 0 to 10.")]
         public decimal Rating { get; set; }
         [Required(ErrorMessage = "Movie duration is required.")]
+        public DateTime CreatedDate { get; set; } = DateTime.Now;
         public TimeSpan Duration { get; set; }
         public string? PosterUrl { get; set; }
         public List<Show>? Shows { get; set; }

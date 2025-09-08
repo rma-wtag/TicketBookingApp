@@ -1,4 +1,5 @@
 ﻿@page "/shows"
+@page "/shows/{MovieId?}"
 @using System.Text.Json
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
@@ -9,19 +10,67 @@
         <div class="col-12">
             <h2 class="mb-4">Available Shows</h2>
 
+            <!-- 📅 Date Filter and Search Controls -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-calendar3 text-muted"></i>
+                        </span>
+                        <input type="date"
+                           class="form-control border-start-0"
+                           placeholder="Filter by date..."
+                           @bind="selectedDate"
+                           @bind:after="HandleDateChange" />
+                        @if (selectedDate.HasValue)
+                        {
+                            <button class="btn btn-outline-secondary"
+                                    type="button"
+                                    @onclick="ClearDateFilter"
+                                    title="Clear date filter">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small class="text-muted">
+                        @if (shows != null)
+                        {
+                            <span>Page @currentPage • Showing @shows.Count results</span>
+                        }
+                    </small>
+                </div>
+            </div>
+
             @if (isLoading)
             {
-                <div class="d-flex justify-content-center">
+                <div class="d-flex justify-content-center py-5">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
+                    <p class="mt-2 text-muted">Loading shows...</p>
                 </div>
             }
             else if (shows == null || !shows.Any())
             {
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i>
-                    No shows available at the moment.
+                <div class="alert alert-info text-center" role="alert">
+                    <h4 class="alert-heading">
+                        <i class="bi bi-info-circle me-2"></i>
+                        No Shows Available
+                    </h4>
+                    @if (selectedDate.HasValue)
+                    {
+                        <p class="mb-2">No shows found for the selected date.</p>
+                        <button class="btn btn-outline-primary btn-sm" @onclick="ClearDateFilter">
+                            <i class="bi bi-arrow-clockwise me-1"></i>
+                            View All Shows
+                        </button>
+                    }
+                    else
+                    {
+                        <p class="mb-0">There are currently no shows available.</p>
+                    }
                 </div>
             }
             else
@@ -44,13 +93,13 @@
                                 <tbody>
                                     @foreach (var show in shows)
                                     {
-                                        <tr>
+                                        <tr class="show-row">
                                             <td style="width: 80px;">
                                                 @if (!string.IsNullOrEmpty(show.Movie?.PosterUrl))
                                                 {
                                                     <img src="@show.Movie.PosterUrl"
                                                          alt="@show.Movie.Title poster"
-                                                         class="img-thumbnail"
+                                                         class="img-thumbnail poster-image"
                                                          style="width: 60px; height: 80px; object-fit: cover;"
                                                          onerror="this.onerror=null; this.src='https://via.placeholder.com/60x80/6c757d/ffffff?text=No+Image';">
                                                 }
@@ -92,7 +141,7 @@
                                                 <span class="fw-bold text-success">${@show.Price}</span>
                                             </td>
                                             <td class="text-center">
-                                                <button class="btn btn-primary btn-sm"
+                                                <button class="btn btn-primary btn-sm book-btn"
                                                         @onclick="() => BookShow(show.Id)"
                                                         disabled="@isBooking">
                                                     @if (isBooking && bookingShowId == show.Id)
@@ -112,6 +161,36 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+
+                <!-- 🔽 Enhanced Pagination Controls -->
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div>
+                        <button class="btn btn-outline-secondary"
+                                @onclick="PreviousPage"
+                                disabled="@(!CanGoPrevious)">
+                            <i class="bi bi-arrow-left"></i> Previous
+                        </button>
+                    </div>
+
+                    <div class="d-flex align-items-center">
+                        <span class="me-3">Page @currentPage</span>
+                        @if (selectedDate.HasValue)
+                        {
+                            <small class="text-muted">
+                                <i class="bi bi-calendar3 me-1"></i>
+                                Filtered by: @selectedDate.Value.ToString("MMM dd, yyyy")
+                            </small>
+                        }
+                    </div>
+
+                    <div>
+                        <button class="btn btn-outline-secondary"
+                                @onclick="NextPage"
+                                disabled="@(!CanGoNext)">
+                            Next <i class="bi bi-arrow-right"></i>
+                        </button>
                     </div>
                 </div>
             }
@@ -135,16 +214,63 @@
     </div>
 </div>
 
+<style>
+    .show-row {
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .show-row:hover {
+        background-color: rgba(0,123,255,0.05);
+    }
+
+    .poster-image {
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .show-row:hover .poster-image {
+        transform: scale(1.05);
+    }
+
+    .book-btn {
+        transition: all 0.2s ease-in-out;
+    }
+
+    .book-btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+    }
+
+    .input-group:focus-within {
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+        border-radius: 0.375rem;
+    }
+</style>
+
 @code {
+    [Parameter] public string? MovieId { get; set; }
     private List<Show>? shows;
     private bool isLoading = true;
     private bool isBooking = false;
     private int bookingShowId = 0;
     private string errorMessage = "";
     private string successMessage = "";
+    private DateTime? selectedDate; // Changed from string to DateTime?
+    private int currentPage = 1;
+    private int pageSize = 10;
+
+
+    // Pagination properties
+    private bool CanGoPrevious => currentPage > 1;
+    private bool CanGoNext => shows != null && shows.Count == pageSize;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadShows();
+    }
+
+    private async Task HandleDateChange()
+    {
+        currentPage = 1; // Reset to first page when filtering
         await LoadShows();
     }
 
@@ -155,7 +281,21 @@
             isLoading = true;
             errorMessage = "";
 
-            var response = await Http.GetAsync("/api/v1/Show/GetAll");
+            // Build the API URL with query parameters
+            var url = $"/api/v1/Show/GetAll?pageNumber={currentPage}&pageSize={pageSize}";
+
+            if (selectedDate.HasValue)
+            {
+                // Format the DateTime for the API
+                url += $"&startTime={selectedDate.Value:yyyy-MM-dd}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(MovieId))
+            {
+                url += $"&movieId={MovieId}";
+            }
+
+            var response = await Http.GetAsync(url);
 
             if (response.IsSuccessStatusCode)
             {
@@ -169,15 +309,39 @@
             else
             {
                 errorMessage = $"Failed to load shows. Status: {response.StatusCode}";
+                shows = new List<Show>();
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"Error loading shows: {ex.Message}";
+            shows = new List<Show>();
         }
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task ClearDateFilter()
+    {
+        selectedDate = null; // Set to null instead of empty string
+        currentPage = 1;
+        await LoadShows();
+    }
+
+    private async Task NextPage()
+    {
+        currentPage++;
+        await LoadShows();
+    }
+
+    private async Task PreviousPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+            await LoadShows();
         }
     }
 

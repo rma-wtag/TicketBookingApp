@@ -2,6 +2,7 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @using Microsoft.JSInterop
+@attribute [Authorize(Roles = "User, Admin")]
 
 <h3 class="mb-4">Payment Success</h3>
 

@@ -330,7 +330,7 @@ namespace TicketBookingApp.Services.BookingServices
                     {
                         Amount = (show!.Price * selectedIds.Count),
                         PaymentStatus = PaymentStatus.Processing,
-                        DateTime = DateTime.UtcNow
+                        DateTime = DateTime.Now
                     }
                 };
 
