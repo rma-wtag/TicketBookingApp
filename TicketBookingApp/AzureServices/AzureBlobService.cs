@@ -18,29 +18,33 @@ namespace TicketBookingApp.AzureServices
         }
         public async Task<string> UploadFileAsync(IFormFile file)
         {
-            if (file == null || file.Length == 0) {
+            if (file == null || file.Length == 0)
                 throw new ArgumentException("File is empty");
-            }
 
             var fileNameWithoutExt = Path.GetFileNameWithoutExtension(file.FileName);
             var fileName = fileNameWithoutExt + ".webp";
 
             var blobClient = _blobClient.GetBlobClient(fileName);
 
+            // Load and convert image to WebP
             using var inputStream = file.OpenReadStream();
             using var image = await Image.LoadAsync(inputStream);
 
             using var outputStream = new MemoryStream();
-            var encoder = new WebpEncoder
-            {
-                Quality = 75
-            };
+            var encoder = new WebpEncoder { Quality = 75 };
             await image.SaveAsync(outputStream, encoder);
             outputStream.Position = 0;
 
             await blobClient.UploadAsync(outputStream, overwrite: true);
 
-            return blobClient.Uri.ToString();
+            // Replace the host in the blob URI with 127.0.0.1
+            var originalUri = blobClient.Uri;
+            var localUri = new UriBuilder(originalUri)
+            {
+                Host = "127.0.0.1"
+            }.Uri;
+
+            return localUri.ToString();
         }
     }
 }

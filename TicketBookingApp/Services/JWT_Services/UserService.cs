@@ -108,7 +108,7 @@ namespace TicketBookingApp.Services.JWT_Services
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password)
             };
 
-            var userRole = await _dbContext.Roles.FirstOrDefaultAsync(r => r.Name == "User");
+            var userRole = await _dbContext.Roles.FirstOrDefaultAsync(r => r.Name == registerDto.role);
             if (userRole != null) {
                 user.Roles.Add(userRole);
             }

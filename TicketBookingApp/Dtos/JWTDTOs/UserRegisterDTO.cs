@@ -13,5 +13,7 @@ namespace TicketBookingApp.Dtos.JWTDTOs
         [Required(ErrorMessage = "Password is required.")]
         [MinLength(6, ErrorMessage = "Password must be at least 6 characters.")]
         public required string Password { get; set; }
+        public string? role = "User";
+
     }
 }
