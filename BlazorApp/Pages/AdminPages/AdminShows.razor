@@ -457,13 +457,6 @@
                 return;
             }
 
-            // Validation
-            if (showForm.EndTime <= showForm.StartTime)
-            {
-                await JSRuntime.InvokeVoidAsync("alert", "End time must be after start time.");
-                return;
-            }
-
             HttpResponseMessage response;
 
             if (isEditing)

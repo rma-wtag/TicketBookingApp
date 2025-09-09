@@ -339,7 +339,13 @@ namespace TicketBookingApp.Services.BookingServices
         {
             var selectedIds = createBookingDtos.SelectedSeatIds.Distinct().ToList();
             if (selectedIds.Count == 0) return null;
-            //if (selectedIds.Count > 4) return null; // need to handle, from user pov
+
+            var existingBookingCount = await _context.BookingSeats
+                                        .Where(bs => bs.ShowId == createBookingDtos.ShowId &&
+                                                     bs.Booking!.UserId == createBookingDtos.UserId)
+                                        .CountAsync();
+            if (existingBookingCount + selectedIds.Count > 5)
+                return null;
 
             var availableSeats = await GetAvailableSeatsAsync(createBookingDtos.ShowId);
             var availableSeatIds = availableSeats!.Select(s => s.Id);

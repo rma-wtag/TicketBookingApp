@@ -157,6 +157,13 @@ namespace JWTDemo
             app.UseCors("AllowReactClient");
             app.MapControllers();
 
+            // Ensure database is created and migrations are applied automatically
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                dbContext.Database.Migrate();
+            }
+
             app.Run();
         }
     }

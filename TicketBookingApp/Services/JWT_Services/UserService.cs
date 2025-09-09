@@ -100,6 +100,7 @@ namespace TicketBookingApp.Services.JWT_Services
         public async Task<bool> RegisterUserAsync(UserRegisterDTO registerDto)
         {
             if (await _dbContext.Users.AnyAsync(u => u.Email == registerDto.Email)) return false;
+            if (await _dbContext.Users.AnyAsync(u => u.Username == registerDto.Username)) return false;
 
             var user = new User { 
                 Email = registerDto.Email,
