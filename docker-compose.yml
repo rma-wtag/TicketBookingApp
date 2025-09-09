@@ -37,7 +37,6 @@ services:
       dockerfile: TicketBookingApp/Dockerfile
     ports:
         - 8000:8080
-        - 8001:8081
     depends_on:
         - ticketdb
         - azurite
@@ -45,7 +44,7 @@ services:
         - ticketcache
 
     environment:
-        - ASPNETCORE_URLS=http://+:8080;https://+:8081
+        - ASPNETCORE_URLS=http://+:8080
         - ConnectionStrings__DefaultConnection=Server=ticketdb;Database=TicketBooking;User=sa;Password=password@12345#;TrustServerCertificate=True;
         - ConnectionStrings__Redis=ticketcache:6379
         - AzureStorage__ConnectionString=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;

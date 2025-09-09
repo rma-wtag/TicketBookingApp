@@ -1,9 +1,11 @@
-using Azure.Storage.Blobs;
+﻿using Azure.Storage.Blobs;
 using Azure.Storage.Queues;
 using DocumentFormat.OpenXml.Math;
 using DocumentFormat.OpenXml.Presentation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
@@ -161,7 +163,22 @@ namespace JWTDemo
             using (var scope = app.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                dbContext.Database.Migrate();
+
+                var databaseCreator = dbContext.Database.GetService<IRelationalDatabaseCreator>();
+
+                // If database doesn't exist at all → create and migrate
+                if (!databaseCreator.Exists())
+                {
+                    dbContext.Database.Migrate();
+                }
+                else
+                {
+                    // Database exists → only apply pending migrations
+                    if (dbContext.Database.GetPendingMigrations().Any())
+                    {
+                        dbContext.Database.Migrate();
+                    }
+                }
             }
 
             app.Run();

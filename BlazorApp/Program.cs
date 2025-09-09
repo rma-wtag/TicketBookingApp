@@ -9,7 +9,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Configure API base address
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:7046") });
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("http://localhost:8000") });
 
 // Register authentication services
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -26,7 +26,7 @@ builder.Services.AddScoped(sp =>
     handler.InnerHandler = new HttpClientHandler();
     return new HttpClient(handler)
     {
-        BaseAddress = new Uri("https://localhost:7064")
+        BaseAddress = new Uri("http://localhost:8000")
     };
 });
 
