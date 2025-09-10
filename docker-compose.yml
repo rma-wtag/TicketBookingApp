@@ -31,10 +31,7 @@ services:
  
   ticketbookingapp:
     container_name: ticket-app
-    image: ${DOCKER_REGISTRY-}ticketbookingapp
-    build:
-      context: .
-      dockerfile: TicketBookingApp/Dockerfile
+    image:  mahin00021/ticketbookingapp
     ports:
         - 8000:8080
     depends_on:
@@ -44,12 +41,16 @@ services:
         - ticketcache
 
     environment:
+        - APPLY_MIGRATIONS=false
         - ASPNETCORE_URLS=http://+:8080
+        - ASPNETCORE_ENVIRONMENT=Development
         - ConnectionStrings__DefaultConnection=Server=ticketdb;Database=TicketBooking;User=sa;Password=password@12345#;TrustServerCertificate=True;
         - ConnectionStrings__Redis=ticketcache:6379
         - AzureStorage__ConnectionString=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
     networks:
      - ticketbooknetwork
+    command:
+     /bin/sh -c "sleep 5 && dotnet TicketBookingApp.dll"
  
   ticketcache:
     container_name: ticket-cache
@@ -62,22 +63,18 @@ services:
 
   azurefunction:
    container_name: azure-function
-   build:
-    context: .
-    dockerfile: AzureFunction/Dockerfile
+   image: mahin00021/azurefunction
    depends_on : 
     - ticketdb
     - azurite
     - ticketcache
    environment:
-        - ConnectionStrings__DefaultConnection=Server=ticketdb;Database=TicketBooking;User=sa;Password=password@12345#;TrustServerCertificate=True;
-        - ConnectionStrings__Redis=ticketcache:6379
-        - FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
-        - ASPNETCORE_URLS=http://+:7164
-        - AzureStorage__ConnectionString=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;     
+    - FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
+    - ASPNETCORE_URLS=http://+:7164
+    - AzureWebJobsStorage=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
+    - ConnectionStrings__DefaultConnection=Server=ticketdb;Database=TicketBooking;User=sa;Password=password@12345#;TrustServerCertificate=True;
+    - ConnectionStrings__Redis=ticketcache:6379
    ports:
     - 7164:7164
    networks : 
     - ticketbooknetwork
-
-  
