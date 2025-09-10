@@ -1,0 +1,9 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "DefaultConnection": "Server=WELLDEV-012;Database=TicketBooking;Trusted_connection=true;TrustServerCertificate=true;",
+    "Redis": "localhost:6379"
+  }
+}
