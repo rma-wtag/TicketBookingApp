@@ -20,7 +20,7 @@ using TicketBookingApp.Services;
 using TicketBookingApp.Services.BookingServices;
 using TicketBookingApp.Services.JWT_Services;
 using TicketBookingApp.Services.PaymentServices;
-namespace JWTDemo
+namespace TicketBookingApp
 {
     public class Program
     {
@@ -180,8 +180,12 @@ namespace JWTDemo
                     var applyMigrations = builder.Configuration.GetValue<bool>("APPLY_MIGRATIONS", false);
                     if (applyMigrations)
                     {
-                        Console.WriteLine("Applying pending migrations to existing database...");
-                        dbContext.Database.Migrate();
+                        var db = app.Services.GetRequiredService<ApplicationDbContext>();
+                        databaseCreator = db.Database.GetService<IRelationalDatabaseCreator>();
+                        if (!databaseCreator.Exists())
+                        {
+                            db.Database.Migrate();
+                        }
                     }
                 }
             }
