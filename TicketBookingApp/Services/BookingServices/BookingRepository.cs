@@ -88,17 +88,114 @@ namespace TicketBookingApp.Services.BookingServices
             return booking;
         }
 
-        // Repository Method
+        public async virtual Task<IEnumerable<Seat>?> GetAvailableSeatsAsync(int showId)
+        {
+            var seats = await _context.Seats
+                                .FromSqlRaw("EXEC GetAvailableSeats @ShowId = {0}", showId)
+                                .ToListAsync();
 
-        // Add these using statements at the top of your file:
-        // using iText.IO.Font.Constants;
-        // using iText.Kernel.Colors;
-        // using iText.Kernel.Font;
-        // using iText.Kernel.Pdf;
-        // using iText.Layout;
-        // using iText.Layout.Borders;
-        // using iText.Layout.Element;
-        // using iText.Layout.Properties;
+            return seats;
+        }
+
+        public async Task<Booking?> CreateNewBookingAsync(CreateBookingDtos createBookingDtos)
+        {
+            var selectedIds = createBookingDtos.SelectedSeatIds.Distinct().ToList();
+            if (selectedIds.Count == 0) return null;
+
+            var existingBookingCount = await _context.BookingSeats
+                                        .Where(bs => bs.ShowId == createBookingDtos.ShowId &&
+                                                     bs.Booking!.UserId == createBookingDtos.UserId)
+                                        .CountAsync();
+            if (existingBookingCount + selectedIds.Count > 5)
+                return null;
+
+            var availableSeats = await GetAvailableSeatsAsync(createBookingDtos.ShowId);
+            var availableSeatIds = availableSeats!.Select(s => s.Id);
+
+            if (!selectedIds.All(id => availableSeatIds.Contains(id)))
+                return null;
+
+            using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+            try
+            {
+                var takenNow = await _context.BookingSeats
+                    .Where(bs => bs.ShowId == createBookingDtos.ShowId && selectedIds.Contains(bs.SeatId))
+                    .Select(bs => bs.SeatId)
+                    .ToListAsync();
+
+                if (takenNow.Any())
+                {
+                    await tx.RollbackAsync();
+                    return null;
+                }
+
+                var show = await _context.Shows.FirstOrDefaultAsync(s => s.Id == createBookingDtos.ShowId);
+
+                var booking = new Booking
+                {
+                    UserId = createBookingDtos.UserId,
+                    ShowId = createBookingDtos.ShowId,
+                    CreatedAt = DateTime.UtcNow,
+                    IsCompleted = false,
+                    Payment = new Payment
+                    {
+                        Amount = (show!.Price * selectedIds.Count),
+                        PaymentStatus = PaymentStatus.Processing,
+                        DateTime = DateTime.Now
+                    }
+                };
+
+                foreach (var seatId in selectedIds)
+                {
+                    booking.BookingSeats.Add(new BookingSeat
+                    {
+                        SeatId = seatId,
+                        ShowId = createBookingDtos.ShowId
+                    });
+                }
+
+                _context.Bookings.Add(booking);
+
+                await _context.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                await InvalidateBookingCacheAsync(booking.Id);
+
+                return booking;
+            }
+            catch (DbUpdateException)
+            {
+                await tx.RollbackAsync();
+                return null;
+            }
+            catch (Exception)
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+        }
+        public async Task<Booking?> DeleteBookingAsync(int id) { 
+            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == id);
+            if (booking == null) { return null; }
+
+            _context.Remove(booking);
+            await _context.SaveChangesAsync();
+
+            await InvalidateBookingCacheAsync(id);
+            return booking;
+        }
+
+        private async Task InvalidateBookingCacheAsync(int? bookingId = null)
+        {
+            await _cache.RemoveAsync(BookingAllCacheKey);
+
+            if (bookingId != null)
+            {
+                string bookingKey = $"{BookingByIdCacheKey}{bookingId}";
+                await _cache.RemoveAsync(bookingKey);
+            }
+        }
 
         public async Task<(byte[] pdfBytes, string fileName)?> GenerateTicketByBookingIdAsync(int id)
         {
@@ -323,116 +420,6 @@ namespace TicketBookingApp.Services.BookingServices
                 .SetFontColor(textColor));
 
             return card;
-        }
-
-
-        public async Task<IEnumerable<Seat>?> GetAvailableSeatsAsync(int showId)
-        {
-            var seats = await _context.Seats
-                                .FromSqlRaw("EXEC GetAvailableSeats @ShowId = {0}", showId)
-                                .ToListAsync();
-
-            return seats;
-        }
-
-        public async Task<Booking?> CreateNewBookingAsync(CreateBookingDtos createBookingDtos)
-        {
-            var selectedIds = createBookingDtos.SelectedSeatIds.Distinct().ToList();
-            if (selectedIds.Count == 0) return null;
-
-            var existingBookingCount = await _context.BookingSeats
-                                        .Where(bs => bs.ShowId == createBookingDtos.ShowId &&
-                                                     bs.Booking!.UserId == createBookingDtos.UserId)
-                                        .CountAsync();
-            if (existingBookingCount + selectedIds.Count > 5)
-                return null;
-
-            var availableSeats = await GetAvailableSeatsAsync(createBookingDtos.ShowId);
-            var availableSeatIds = availableSeats!.Select(s => s.Id);
-
-            if (!selectedIds.All(id => availableSeatIds.Contains(id)))
-                return null;
-
-            using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-
-            try
-            {
-                var takenNow = await _context.BookingSeats
-                    .Where(bs => bs.ShowId == createBookingDtos.ShowId && selectedIds.Contains(bs.SeatId))
-                    .Select(bs => bs.SeatId)
-                    .ToListAsync();
-
-                if (takenNow.Any())
-                {
-                    await tx.RollbackAsync();
-                    return null;
-                }
-
-                var show = await _context.Shows.FirstOrDefaultAsync(s => s.Id == createBookingDtos.ShowId);
-
-                var booking = new Booking
-                {
-                    UserId = createBookingDtos.UserId,
-                    ShowId = createBookingDtos.ShowId,
-                    CreatedAt = DateTime.UtcNow,
-                    IsCompleted = false,
-                    Payment = new Payment
-                    {
-                        Amount = (show!.Price * selectedIds.Count),
-                        PaymentStatus = PaymentStatus.Processing,
-                        DateTime = DateTime.Now
-                    }
-                };
-
-                foreach (var seatId in selectedIds)
-                {
-                    booking.BookingSeats.Add(new BookingSeat
-                    {
-                        SeatId = seatId,
-                        ShowId = createBookingDtos.ShowId
-                    });
-                }
-
-                _context.Bookings.Add(booking);
-
-                await _context.SaveChangesAsync();
-                await tx.CommitAsync();
-
-                await InvalidateBookingCacheAsync(booking.Id);
-
-                return booking;
-            }
-            catch (DbUpdateException)
-            {
-                await tx.RollbackAsync();
-                return null;
-            }
-            catch (Exception)
-            {
-                await tx.RollbackAsync();
-                throw;
-            }
-        }
-        public async Task<Booking?> DeleteBookingAsync(int id) { 
-            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == id);
-            if (booking == null) { return null; }
-
-            _context.Remove(booking);
-            await _context.SaveChangesAsync();
-
-            await InvalidateBookingCacheAsync(id);
-            return booking;
-        }
-
-        private async Task InvalidateBookingCacheAsync(int? bookingId = null)
-        {
-            await _cache.RemoveAsync(BookingAllCacheKey);
-
-            if (bookingId != null)
-            {
-                string bookingKey = $"{BookingByIdCacheKey}{bookingId}";
-                await _cache.RemoveAsync(bookingKey);
-            }
         }
     }
 }

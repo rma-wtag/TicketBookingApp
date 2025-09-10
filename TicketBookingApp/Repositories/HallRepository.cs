@@ -1,8 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using DocumentFormat.OpenXml.Wordprocessing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
 using TicketBookingApp.Entities;
 using TicketBookingApp.Models;
+using TicketBookingApp.Services;
 
 namespace TicketBookingApp.Repositories
 {
@@ -10,13 +12,15 @@ namespace TicketBookingApp.Repositories
     {
         private readonly ApplicationDbContext _context;
         private readonly IDistributedCache _cache;
+        private readonly ILogService _logService;
         private const string HallAllCacheKey = "halls:getall";
         private const string HallByIdCacheKey = "halls:";
 
-        public HallRepository(ApplicationDbContext context, IDistributedCache cache)
+        public HallRepository(ApplicationDbContext context, IDistributedCache cache, ILogService logService)
         {
             _context = context;
             _cache = cache;
+            _logService = logService;
         }
         public async Task<IEnumerable<Hall>> GetAllAsync()
         {
@@ -97,6 +101,8 @@ namespace TicketBookingApp.Repositories
             hall.Seats = seats;
 
             await InvalidateCacheAsync();
+            await _logService.LogAsync("CREATE","Hall",$"Created hall '{hall.Name}' with {seats.Count} seats.");
+
             return hall;
         }
 
@@ -105,12 +111,14 @@ namespace TicketBookingApp.Repositories
             var existingHall = await _context.Halls.FindAsync(id);
             if (existingHall == null)
                 return null;
-
+            string oldName = existingHall.Name;
             existingHall.Name = hall.Name;
             _context.Halls.Update(existingHall);
 
             await _context.SaveChangesAsync();
             await InvalidateCacheAsync(id);
+
+            await _logService.LogAsync("UPDATE", "Hall", $"Updated hall ID {id}: Name changed from '{oldName}' to '{hall.Name}'.");
 
             return existingHall;
         }
@@ -125,6 +133,7 @@ namespace TicketBookingApp.Repositories
             await _context.SaveChangesAsync();
 
             await InvalidateCacheAsync(id);
+            await _logService.LogAsync("DELETE", "Hall", $"Deleted hall '{existingHall.Name}' (ID: {id}).");
             return existingHall;
         }
 

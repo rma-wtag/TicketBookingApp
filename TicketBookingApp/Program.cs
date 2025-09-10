@@ -16,6 +16,7 @@ using TicketBookingApp.Dtos.ShowDtos;
 using TicketBookingApp.Entities;
 using TicketBookingApp.Helpers;
 using TicketBookingApp.Repositories;
+using TicketBookingApp.Services;
 using TicketBookingApp.Services.BookingServices;
 using TicketBookingApp.Services.JWT_Services;
 using TicketBookingApp.Services.PaymentServices;
@@ -60,6 +61,7 @@ namespace JWTDemo
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+            builder.Services.AddScoped<ILogService, LogService>();
 
             Lazy<IClientCacheService>? clientCacheInstance = null;
             
@@ -159,26 +161,10 @@ namespace JWTDemo
             app.UseCors("AllowReactClient");
             app.MapControllers();
 
-            // Ensure database is created and migrations are applied automatically
             using (var scope = app.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-                var databaseCreator = dbContext.Database.GetService<IRelationalDatabaseCreator>();
-
-                // If database doesn't exist at all → create and migrate
-                if (!databaseCreator.Exists())
-                {
-                    dbContext.Database.Migrate();
-                }
-                else
-                {
-                    // Database exists → only apply pending migrations
-                    if (dbContext.Database.GetPendingMigrations().Any())
-                    {
-                        dbContext.Database.Migrate();
-                    }
-                }
+                dbContext.Database.Migrate();
             }
 
             app.Run();

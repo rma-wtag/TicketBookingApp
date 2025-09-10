@@ -78,7 +78,7 @@ namespace TicketBookingApp.Entities
             // BookingSeat → Seat
             modelBuilder.Entity<BookingSeat>()
                 .HasOne(bs => bs.Seat)
-                .WithMany(s => s.BookingSeats)
+                .WithMany(s => s.BookingSeats!)
                 .HasForeignKey(bs => bs.SeatId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -90,7 +90,6 @@ namespace TicketBookingApp.Entities
             modelBuilder.Entity<BookingSeat>()
                 .HasIndex(bs => new { bs.ShowId, bs.SeatId })
                 .IsUnique();
-
         }
 
         public DbSet<User> Users { get; set; } = null!;
@@ -104,6 +103,7 @@ namespace TicketBookingApp.Entities
         public DbSet<Payment> Payments { get; set; } = null!;
         public DbSet<Seat> Seats { get; set; } = null!;
         public DbSet<Show> Shows { get; set; } = null!;
+        public DbSet<Log> Logs { get; set; } = null!;
 
     }
 }
