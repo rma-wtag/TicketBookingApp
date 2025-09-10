@@ -161,6 +161,7 @@ namespace JWTDemo
             app.UseCors("AllowReactClient");
             app.MapControllers();
 
+            //to fix docker migration issue.
             using (var scope = app.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
