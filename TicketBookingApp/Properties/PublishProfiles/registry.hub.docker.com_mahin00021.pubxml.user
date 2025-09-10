@@ -1,10 +1,16 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!-- https://go.microsoft.com/fwlink/?LinkID=208121. -->
 <Project>
   <PropertyGroup>
-    <EncryptedPassword>AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAQgd2zIp+8ESWBNyrAVZbLgAAAAACAAAAAAAQZgAAAAEAACAAAAA7DdZQjlFVRLt5gyJ3idU3Dii006NCpM/xshIJB290UAAAAAAOgAAAAAIAACAAAAC50tSdF9ONez3TQg5wf2qfKsXqE/XFcP0nZdn0c3QcayAAAACFgVYuTcj2QQF6G4Q1T181/BbeMoCpvrGe8/ugB96Y8kAAAAAJ5UJ5fyA4rc2ITs7KdvqT8PMNAX2Xg8UmBghbvo6vS6TkDednrD2SBlkfLua3FAC6/HpiUHuOfz95PphjVjbo</EncryptedPassword>
-    <TimeStampOfAssociatedLegacyPublishXmlFile />
-    <History>False|2025-09-10T06:25:14.5586866Z||;False|2025-09-10T12:24:50.5612386+06:00||;False|2025-09-10T12:23:52.2691539+06:00||;</History>
-    <LastFailureDetails>2025-09-10T06:25:14.5586866Z|checkContainerPrereq</LastFailureDetails>
+    <WebPublishMethod>Custom</WebPublishMethod>
+    <DockerPublish>true</DockerPublish>
+    <RegistryUrl>https://registry.hub.docker.com/mahin00021</RegistryUrl>
+    <UserName>mahin00021</UserName>
+    <PublishImageTag>latest</PublishImageTag>
+    <PublishProvider>ContainerRegistry</PublishProvider>
+    <LastUsedBuildConfiguration>Release</LastUsedBuildConfiguration>
+    <LastUsedPlatform>Any CPU</LastUsedPlatform>
+    <ProjectGuid>1d057e74-0cd3-49c6-bd12-7799b0133956</ProjectGuid>
+    <_TargetId>DockerContainerRegistry</_TargetId>
   </PropertyGroup>
 </Project>

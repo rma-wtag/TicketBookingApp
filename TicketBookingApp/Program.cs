@@ -161,6 +161,7 @@ namespace JWTDemo
             app.UseCors("AllowReactClient");
             app.MapControllers();
 
+            //to fix docker migration issue.
             using (var scope = app.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -174,6 +175,8 @@ namespace JWTDemo
                 else
                 {
                     Console.WriteLine("Database exists. Skipping creation.");
+
+                    // Optionally, run migrations only if explicitly requested
                     var applyMigrations = builder.Configuration.GetValue<bool>("APPLY_MIGRATIONS", false);
                     if (applyMigrations)
                     {
