@@ -4,8 +4,7 @@
   <PropertyGroup>
     <EncryptedPassword>AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAQgd2zIp+8ESWBNyrAVZbLgAAAAACAAAAAAAQZgAAAAEAACAAAAA7DdZQjlFVRLt5gyJ3idU3Dii006NCpM/xshIJB290UAAAAAAOgAAAAAIAACAAAAC50tSdF9ONez3TQg5wf2qfKsXqE/XFcP0nZdn0c3QcayAAAACFgVYuTcj2QQF6G4Q1T181/BbeMoCpvrGe8/ugB96Y8kAAAAAJ5UJ5fyA4rc2ITs7KdvqT8PMNAX2Xg8UmBghbvo6vS6TkDednrD2SBlkfLua3FAC6/HpiUHuOfz95PphjVjbo</EncryptedPassword>
     <TimeStampOfAssociatedLegacyPublishXmlFile />
-    <History>True|2025-09-09T13:10:17.4563916Z||;True|2025-09-09T19:04:02.6382673+06:00||;True|2025-09-09T18:55:04.0412767+06:00||;False|2025-09-09T18:53:17.4253026+06:00||;True|2025-09-09T18:05:01.9954646+06:00||;True|2025-09-09T17:53:52.7440031+06:00||;</History>
-    <LastFailureDetails>
-    </LastFailureDetails>
+    <History>False|2025-09-10T06:25:14.5586866Z||;False|2025-09-10T12:24:50.5612386+06:00||;False|2025-09-10T12:23:52.2691539+06:00||;</History>
+    <LastFailureDetails>2025-09-10T06:25:14.5586866Z|checkContainerPrereq</LastFailureDetails>
   </PropertyGroup>
 </Project>

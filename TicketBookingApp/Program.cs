@@ -164,7 +164,23 @@ namespace JWTDemo
             using (var scope = app.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                dbContext.Database.Migrate();
+                var databaseCreator = dbContext.Database.GetService<IRelationalDatabaseCreator>();
+
+                if (!databaseCreator.Exists())
+                {
+                    Console.WriteLine("Database does not exist. Creating and applying migrations...");
+                    dbContext.Database.Migrate();
+                }
+                else
+                {
+                    Console.WriteLine("Database exists. Skipping creation.");
+                    var applyMigrations = builder.Configuration.GetValue<bool>("APPLY_MIGRATIONS", false);
+                    if (applyMigrations)
+                    {
+                        Console.WriteLine("Applying pending migrations to existing database...");
+                        dbContext.Database.Migrate();
+                    }
+                }
             }
 
             app.Run();
