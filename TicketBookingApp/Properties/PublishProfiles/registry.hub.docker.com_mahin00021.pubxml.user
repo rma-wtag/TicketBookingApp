@@ -12,5 +12,8 @@
     <LastUsedPlatform>Any CPU</LastUsedPlatform>
     <ProjectGuid>1d057e74-0cd3-49c6-bd12-7799b0133956</ProjectGuid>
     <_TargetId>DockerContainerRegistry</_TargetId>
+    <History>True|2025-09-10T07:48:07.9493503Z||;False|2025-09-10T13:45:50.1117394+06:00||;</History>
+    <LastFailureDetails>
+    </LastFailureDetails>
   </PropertyGroup>
 </Project>
