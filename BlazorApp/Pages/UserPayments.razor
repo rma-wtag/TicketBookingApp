@@ -245,18 +245,17 @@ else
                 return;
             }
 
-            // STEP 4: Create Payment Session
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+
             var paymentSessionRequest = new PaymentSessionRequest
             {
                 BookingId = payment.BookingId,
                 CusName = "Demo Customer",           // TODO: Replace with actual user name
                 CusEmail = "demo@example.com",       // TODO: Replace with actual user email
                 Amount = payment.Amount
-            };
-
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
 
             var paymentJson = JsonSerializer.Serialize(paymentSessionRequest, options);

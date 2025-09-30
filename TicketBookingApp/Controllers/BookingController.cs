@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TicketBookingApp.Dtos.BookingDtos;
 using TicketBookingApp.Models;
 using TicketBookingApp.Repositories;
@@ -59,6 +60,7 @@ namespace TicketBookingApp.Controllers
         //Then choose not booked seats , that we get from BookingSeat table
 
         [HttpPost]
+        [EnableRateLimiting("fixedOnIP")]
         public async Task<ActionResult<Booking>> CreateNewBooking([FromBody]CreateBookingDtos createBookingDtos) {
             
             var newBooking = await _repo.CreateNewBookingAsync(createBookingDtos);

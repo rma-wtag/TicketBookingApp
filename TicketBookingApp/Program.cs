@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using System.IdentityModel.Tokens.Jwt;
+using System.Threading.RateLimiting;
 using TicketBookingApp.AzureServices;
 using TicketBookingApp.Dtos.MovieDtos;
 using TicketBookingApp.Dtos.ShowDtos;
@@ -142,6 +143,22 @@ namespace TicketBookingApp
                                     .AllowCredentials());
             });
 
+            //Rate Limiting in a Specific-IP Address
+            builder.Services.AddRateLimiter(options => {
+
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+                options.AddPolicy("fixedOnIP", httpContext => 
+                RateLimitPartition.GetFixedWindowLimiter(
+                    
+                    partitionKey : httpContext.Connection.RemoteIpAddress?.ToString(),
+                    factory : _ => new FixedWindowRateLimiterOptions { 
+                        PermitLimit = 3,
+                        Window = TimeSpan.FromSeconds(10)
+                    }
+                ));
+            });
+
 
             var app = builder.Build();
 
@@ -160,6 +177,7 @@ namespace TicketBookingApp
             app.UseAuthorization();
             app.UseCors("AllowReactClient");
             app.MapControllers();
+            app.UseRateLimiter();
 
             //to fix docker migration issue.
             using (var scope = app.Services.CreateScope())

@@ -34,9 +34,9 @@ namespace TicketBookingApp.Controllers
                 { "currency", "BDT" },
                 { "tran_id", req.BookingId.ToString() },
 
-                { "success_url", "https://localhost:7064/api/v1/PaymentGateway/success" },
-                { "fail_url", "https://localhost:7064/api/v1/PaymentGateway/fail" },
-                { "cancel_url", "https://localhost:7064/api/v1/PaymentGateway/cancel" },
+                { "success_url", "http://localhost:8000/api/v1/PaymentGateway/success" },
+                { "fail_url", "http://localhost:8000/api/v1/PaymentGateway/fail" },
+                { "cancel_url", "https://localhost:8000/api/v1/PaymentGateway/cancel" },
                 { "cus_name", req.CusName },
                 { "cus_email", req.CusEmail },
                 { "cus_add1", "Dhaka" },
